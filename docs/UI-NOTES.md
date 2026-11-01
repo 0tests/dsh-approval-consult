@@ -1,6 +1,6 @@
 # 审批咨询台 · 客户端 UI 自测记录（ui-dev）
 
-最终版本：`lib/client.js`（最后一次修改：2026-10-30 22:47，之后停止修改）
+最终版本：`lib/client.js`（最后修改：2026-11-02 00:50，新增「复制审查意见」；之前一次 2026-10-30 22:47）
 验证环境：DSH Web `http://127.0.0.1:3456`、Chromium 156、Playwright MCP。
 
 ## 一、架构要点（与 Lead 修正后的契约一致）
@@ -50,6 +50,7 @@
 | 24 | history 无记录不渲染 | 通过 | 拉取失败或空数组时返回 null（console 无报错） |
 | 25 | 文案不承诺“聊天里可见” | 通过 | 「已保存到会话」tooltip 明确写「写入会话日志、模型下一轮能看到；聊天流不显示这一行」 |
 | 26 | │ 模块 id / demo 模式 / 测试钩子保留 | 通过 | `id: dsh-approval-consult`；`?consult-demo=1`；`data-approval-consult-{pill,dock,panel,thread,context,history,error}` 均在 |
+| 27 | 复制审查意见（新增） | 通过 | `data-approval-consult-copy-opinion`：点击后按钮变「已复制」+ toast，剪贴板内容为「【自动审查意见】结论/风险/工具/理由」；`?consult-demo=no-reviewer` 下不渲染；468 / 390 宽度都不溢出、不换行挤压 |
 
 未覆盖 / 风险：
 - 真机 iPhone 键盘与安全区未实测（无真机），仅按 `visualViewport` + safe-area 实现并做了 390 宽度验证。
