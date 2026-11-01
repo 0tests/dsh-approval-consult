@@ -27,9 +27,11 @@
       （已有公开仓库 `0tests/dsh-balance-pet`，本插件沿用同一组织/命名风格）。
 - [x] **remote 已配置**：`origin = git@github.com:0tests/dsh-approval-consult.git`（SSH，走 `ssh.github.com:443`）。
       `package.json` 已写入 `repository`/`homepage`/`bugs` 指向该地址。
-- [ ] **远程仓库尚未创建**：`git ls-remote` 返回 `Repository not found`。需要二选一：
-      a) 在 GitHub 网页新建空仓库 `0tests/dsh-approval-consult`（public，不加 README/gitignore），然后 `git push -u origin main`；
-      b) 或登录 `gh`（当前未登录）后 `gh repo create 0tests/dsh-approval-consult --public --source . --remote origin --push`。
+- [x] **远程仓库已创建并推送**：<https://github.com/0tests/dsh-approval-consult>（public，
+      2026-11-01 `gh repo create` + `git push -u origin main`，首发 8 个提交，`main` 为默认分支；
+      topics：`deepseek-harness` `dsh-plugin` `ai-approval` `cordis` `approval-workflow` `human-in-the-loop`）。
+- [x] **CI 在 GitHub 上首个 run 通过**：`ci` workflow（ubuntu-latest + windows-latest / Node 20，
+      `npm run check` + `npm test`），run 26s，`success`。README 顶部已加 CI 与许可证徽章。
 - [x] **提交者身份匿名化**：仓库内提交使用 `dsh-approval-consult <noreply@users.noreply.github.com>`，
       未使用本机 `Administrator@ZEROTESTS-PC`。
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
