@@ -158,7 +158,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 - 面板「常见问题 → 编辑」进入编辑视图：执行 AI / 审查 AI 分栏，支持新增、删除、↑↓ 排序、修改、恢复默认（两段式确认）、取消。
 - 校验：每侧最多 10 条、单条 ≤300 字、去重、空行忽略；错误以面板内错误条展示。
-- 持久化：保存到插件目录 `data/presets.json`（原子写；`POST /presets`），优先级 **用户文件 > `config.presets` > 内置默认**；`POST /presets/reset` 删文件回到默认。
+- 持久化：保存到用户数据目录的 `presets.json`（默认 `~/.dsh-approval-consult/presets.json`，可用 `dataDir` / `DSH_APPROVAL_CONSULT_DATA` 覆盖；原子写；`POST /presets`），优先级 **用户文件 > `config.presets` > 内置默认**；`POST /presets/reset` 删文件回到默认。
 - 保存后立即更新当前面板的 chips（宿主 `/context` 也同步），多标签页刷新后一致。
 
 ---
@@ -174,7 +174,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 | POST | `/dsh-approval-consult/relay` | 把审查 AI 回答/用户备注注入执行 AI 上下文 |
 | POST | `/dsh-approval-consult/review` | 对没有官方审查记录的审批做 advisory 重新评估 |
 | GET/POST | `/dsh-approval-consult/presets` | 读取/保存常用问题（`{executor?, reviewer?}`；最多 10 条、单条 ≤300 字） |
-| POST | `/dsh-approval-consult/presets/reset` | 恢复默认常用问题（删除 `data/presets.json`） |
+| POST | `/dsh-approval-consult/presets/reset` | 恢复默认常用问题（删除数据目录里的 `presets.json`） |
 | GET | `/dsh-approval-consult/diag` | 计数、捕获归属、能力检测（`reviewerAvailable`/`timeoutAvailable`）、存活 agent 的权限预设等诊断 |
 | GET/POST | `/dsh-approval-consult/debug/{inspect,selftest,events,inject,features}` | devTools 排障（可用 `devTools:false` 关闭；`features` 可临时切换能力开关自测） |
 
@@ -187,7 +187,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 - **只适用于 Web 页面**（`shell.overlay` 槽位 + 同源路由）；Desktop/CLI 不会出现 UI，但宿主插件本身无副作用。
 - **与 `dsh-approval-timeout` 的可选集成**：宿主通过插件注册表检测该插件是否在运行；未安装时 `/context.features.timeoutAvailable=false`，客户端**一次探测请求都不发**、不渲染任何倒计时相关内容（不会出现 "未安装" 提示，也不会产生 404 噪音）。已安装时只读探测 `/status`，按 `timeoutAutoPause` 策略决定是否调用 `/cancel`。注意该插件的 `/cancel` 是**全局**的（会取消所有待审批项的倒计时）：自动路径在探测到还有其它未取消的待审批项时会拒绝自动暂停并提示；只有用户手动点面板里的「暂停倒计时」才做全局取消（按钮 tooltip 已说明）。
 - **与官方 `@deepseek-ai/dsh-experimental-auto-review` 的可选依赖**：未安装时只保留执行 AI 通道（见上文）；已安装时两条通道都可用，且审查侧优先复用官方审查请求。
-- **常用问题持久化**：用户编辑后写入 `<插件目录>/data/presets.json`（UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。link 安装目录可写即可，不写 profile patch。
+- **常用问题持久化**：用户编辑后写入 `<dataDir>/presets.json`（默认 `~/.dsh-approval-consult`；UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。npm 安装升级不会覆盖用户配置，不写 profile patch。
 - **与 `dsh-notify` / `mobile-fix` 等插件无冲突**：不依赖、不修改官方审批卡片 DOM；不占用其他插件的 slot id。
 - **依赖官方的稳定面**：`REVIEW_POLICY` 前缀、`approval/request` waterfall、`llm/stream` waterfall、`agent.inject()`、`session.surface`。升级 DSH 后若官方改了审查策略文本，重新运行 `node tests/extract-review-policy.mjs` 即可同步（该脚本从已安装的 auto-review 包原样抽取）。
 - **已知限制**：
@@ -248,8 +248,8 @@ dsh-approval-consult/
 | --- | --- |
 | ![历史](docs/assets/history-panel.png) | ![仅执行 AI](docs/assets/executor-only.png) |
 
-> 截图来自真实 DSH 会话（深色壁纸主题）；更多开发过程截图保留在本地
-> `<local-shots-dir>\`，不随仓库发布。
+> 截图为面板本体（已裁掉宿主界面与壁纸），数据来自内置演示模式（`?consult-demo=1`），
+> 不包含任何真实会话内容；更多开发过程截图保留在本地 `<local-shots-dir>\`，不随仓库发布。
 
 ---
 
