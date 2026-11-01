@@ -36,15 +36,27 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-### 方式 A：Plugins 页面（推荐）
+> 当前版本 **v1.0.0**（[Release 说明](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.0.0)）。
+> npm 包尚未发布；先装 Release 里的 tarball 即可，发布 npm 后同样的包名可直接安装。
 
-1. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」；
-2. 输入本仓库所在目录的绝对路径（例如 `D:\Tools\dsh-approval-consult`）或 npm 包名 `dsh-approval-consult`；
+### 方式 A：从 Release 安装（推荐）
+
+1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
+   `dsh-approval-consult-1.0.0.tgz`；
+2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
+   或直接填下载链接
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.0.0/dsh-approval-consult-1.0.0.tgz`；
+3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
+
+### 方式 B：本地目录（源码 / 开发）
+
+1. `git clone https://github.com/0tests/dsh-approval-consult`；
+2. 打开 DSH Web →「插件」→「添加插件」→「安装第三方插件」，输入该目录的绝对路径；
 3. 安装完成后点「立即启用」。
 
-### 方式 B：CLI / 会话内
+### 方式 C：CLI / 会话内
 
-让 Agent 用 `plugin_manager` 的 `install_bundle` 安装该目录 / npm 包（需要审批权限）。
+让 Agent 用 `plugin_manager` 的 `install_bundle` 安装该 tarball / 目录 / npm 包（需要审批权限）。
 
 > 发布默认 `devWatch: false`、`devTools: false`（安全默认）。本地开发时可在 profile 的
 > `cordis.patch.yml` 覆盖：`- id: approval-consult` → `devWatch: true` / `devTools: true`。

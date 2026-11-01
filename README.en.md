@@ -49,11 +49,16 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 Requires DSH Web `0.2.1-rc.2` (tested) and Node `>=20`.
 
-1. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin**.
-2. Enter the absolute path of this repository / npm package, e.g. `D:\Tools\dsh-approval-consult`.
-3. Enable it. The panel appears on the next approval.
+Current version **v1.0.0** ([release notes](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.0.0)).
+The npm package is not published yet — install the release tarball:
 
-Or install the npm package with `plugin_manager.install_bundle` (`dsh-approval-consult`).
+1. Download `dsh-approval-consult-1.0.0.tgz` from
+   [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest).
+2. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin** and point it at the
+   tarball's absolute path (or the download URL directly).
+3. Enable it and restart `dsh web` once.
+
+Alternatively clone the repository and install its directory, or use `plugin_manager.install_bundle`.
 
 > `devWatch` and `devTools` default to **false** in this package. Local development can override them
 > in the profile `cordis.patch.yml` (`- id: approval-consult` → `devWatch: true, devTools: true`).
