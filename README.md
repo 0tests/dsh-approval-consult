@@ -253,6 +253,7 @@ dsh-approval-consult/
 │  ├─ DOGFOOD.md           # 真实使用记录与修复清单
 │  ├─ PATCHES.md           # 对可选第三方插件（timeout）的本地补丁记录
 │  ├─ PUBLISHING.md        # 发布前检查清单
+│  ├─ ATTACHMENTS.md       # 图文上传（v1.1）技术方案（规划稿）
 │  ├─ BACKLOG.md           # 待办与未完成需求
 │  ├─ UI-NOTES.md          # 客户端自测表
 │  └─ assets/              # README 截图
@@ -298,7 +299,9 @@ npm test        # 宿主纯函数单测（25 项）+ zh/en locale 一致性
 
 ### 1.1 规划（1.0 不含）
 
-- 面板内上传附件/图片（[`docs/BACKLOG.md`](docs/BACKLOG.md) 4.5；需要宿主上传路由 + 附件存储 + 多模态能力探测）；
+- 图文上传（规划稿：[`docs/ATTACHMENTS.md`](docs/ATTACHMENTS.md)）——复用宿主 `ctx.attachments`，
+  图片随侧调用发送且不破坏 prompt cache；
+- 一键复制审查意见（**已实现，待发版**）；
 - advisory 自动评估开关（manual / on-open / background）；
 - 决定附言（允许/拒绝时附一句原因给执行 AI）。
 
