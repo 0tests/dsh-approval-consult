@@ -21,9 +21,17 @@
 
 ## 发布前还需要
 
-- [x] **本地 git 仓库**：`git init -b main` + 首提交 `6715bf6`（35 个文件，`data/`/截图/日志已忽略）。
-- [ ] **GitHub 远程**：建远程仓库、`git remote add origin`、push；发布前再确认提交者身份（当前提交者
-      使用通用 `dsh-approval-consult <noreply@users.noreply.github.com>`，未泄露本机用户名）。
+- [x] **本地 git 仓库**：`git init -b main` + 首提交 `6715bf6`（35 个文件，`data/`/截图/日志已忽略）；
+      后续提交 `d967190`（发布准备）、`6a09853`（仓库元数据）。
+- [x] **GitHub 身份已确认**：本机 SSH key `0tests@github` 认证成功 → GitHub 账号 **`0tests`**
+      （已有公开仓库 `0tests/dsh-balance-pet`，本插件沿用同一组织/命名风格）。
+- [x] **remote 已配置**：`origin = git@github.com:0tests/dsh-approval-consult.git`（SSH，走 `ssh.github.com:443`）。
+      `package.json` 已写入 `repository`/`homepage`/`bugs` 指向该地址。
+- [ ] **远程仓库尚未创建**：`git ls-remote` 返回 `Repository not found`。需要二选一：
+      a) 在 GitHub 网页新建空仓库 `0tests/dsh-approval-consult`（public，不加 README/gitignore），然后 `git push -u origin main`；
+      b) 或登录 `gh`（当前未登录）后 `gh repo create 0tests/dsh-approval-consult --public --source . --remote origin --push`。
+- [x] **提交者身份匿名化**：仓库内提交使用 `dsh-approval-consult <noreply@users.noreply.github.com>`，
+      未使用本机 `Administrator@ZEROTESTS-PC`。
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
 - [x] **npm 包名**：`dsh-approval-consult` 目前 **404（可用）**（2026-11-01 用 `cmd /c npm view` 确认）。
 - [ ] **版本**：当前 1.0.0；首个公开版本可考虑 0.1.0 以示 API 未冻结（需同步 CHANGELOG/README）。
