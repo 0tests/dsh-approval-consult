@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "dsh-approval-consult",
   "version": "1.0.0",
   "license": "MIT",
@@ -34,7 +34,7 @@
     "NOTICE.md"
   ],
   "scripts": {
-    "test": "node tests/unit.mjs && node tests/locale-parity.mjs",
+    "test": "node tests/unit.mjs && node tests/locale-parity.mjs && node tests/css-classes.mjs",
     "check": "node --check lib/impl.js && node --check lib/client.js && node --check lib/index.js"
   },
   "engines": {
