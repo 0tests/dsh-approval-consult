@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Approval Consult",
+    "description": "While an approval is pending, ask the executing AI and the review AI separately, then decide with the full picture. Answers can be relayed to the executor and kept in the session."
+  }
+}

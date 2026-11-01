@@ -1,0 +1,16 @@
+# 依赖与构建产物（本插件无构建步骤，但本地开发可能装依赖）
+node_modules/
+pnpm-lock.yaml
+
+# 用户数据 / 本地状态（不要提交）
+data/
+.dsh/
+*.log
+
+# 开发临时文件
+tmp/
+.DS_Store
+Thumbs.db
+
+# 本地截图（发布用的截图放在 docs/assets/ 下）
+approval-consult-shots/
