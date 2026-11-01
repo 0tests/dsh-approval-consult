@@ -207,6 +207,7 @@ dsh-approval-consult/
 ├─ cordis.patch.yml        # 插入宿主插件行与配置（安全默认：devWatch/devTools=false）
 ├─ icon.svg  locale/{zh,en}.json
 ├─ LICENSE  NOTICE.md  CHANGELOG.md  README.en.md
+├─ CONTRIBUTING.md  SECURITY.md
 ├─ .github/workflows/ci.yml
 ├─ lib/
 │  ├─ index.js             # 稳定入口 shim（dynamic import + 可选 devWatch 热重载）

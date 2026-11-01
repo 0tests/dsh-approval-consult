@@ -35,19 +35,21 @@
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
 - [x] **npm 包名**：`dsh-approval-consult` 目前 **404（可用）**（2026-11-01 用 `cmd /c npm view` 确认）。
 - [ ] **版本**：当前 1.0.0；首个公开版本可考虑 0.1.0 以示 API 未冻结（需同步 CHANGELOG/README）。
-- [ ] **发布 dry-run**：`npm pack --dry-run` 检查 `files` 列表没有漏（`lib/`、`locale/`、`icon.svg`、`cordis.patch.yml`、LICENSE/NOTICE）。
+- [x] **发布 dry-run**：`npm pack --dry-run` 通过（13 个文件、包体 104.7 kB；含 `lib/`、`locale/`、`icon.svg`、
+      `cordis.patch.yml`、LICENSE/NOTICE/README，不含 `docs/assets` 与本地文件）。
 - [ ] **安装即用验证**：
       在一个干净 profile（`dsh` 新 profile）里 `install_bundle` 安装本包，不依赖任何本地开发文件；
       验证无 `auto-review`、无 `approval-timeout`、无网络时分别的降级行为。
 - [ ] **真实浏览器矩阵**：Chrome / Edge / Firefox（Firefox 的 Popover 支持情况需验证；
       若不支持会退化为 fixed 层）、亮色主题、iPhone 真机键盘。
-- [ ] **License 合规复查**：确认 `lib/review-policy.txt` 的 MIT 归属已在 NOTICE 写明（已写），
-      发行包内附 LICENSE + NOTICE。
+- [x] **License 合规复查**：`lib/review-policy.txt` 的 MIT 归属已在 NOTICE 写明，发行包内附 LICENSE + NOTICE。
 - [x] **安全审查**：`data/`、日志、本机绝对路径已从公开文档清理（2026-11-01 全仓扫描无残留）；
       `/debug/*` 默认关闭；HTTP 路由全部经 `connection.requestRejection` 鉴权。
 - [x] **文档**：`VERIFICATION.md` / `DOGFOOD.md` / `PATCHES.md` / `UI-NOTES.md` 中的个人绝对路径
       已替换为 `<workspace>` / `<DSH_HOME>` / `<user-home>` 占位（保留证据可读性）。
-- [ ] **社区文件**：`CONTRIBUTING.md`、Issue/PR 模板（可选）、`SECURITY.md`（可选）。
+- [x] **社区文件**：`CONTRIBUTING.md`、`SECURITY.md`（私有漏洞报告）；Issue/PR 模板暂不需要。
+- [x] **README 截图**：全部改为**面板本体**截图（裁掉宿主界面与壁纸，演示数据，
+      `docs/assets` 合计约 416 KB），避免泄露真实会话内容。
 
 ## 不在 1.0 范围（后续版本）
 
