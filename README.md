@@ -264,6 +264,12 @@ npm test        # 宿主纯函数单测（25 项）+ zh/en locale 一致性
 界面迭代：URL 加 `?consult-demo=1`（或 `localStorage['dsh-approval-consult.demo']='1'`）进入演示模式：
 胶囊常显、面板用内置 mock 数据、问答本地伪造流式，不发真实请求。
 
+### 1.1 规划（1.0 不含）
+
+- 面板内上传附件/图片（[`docs/BACKLOG.md`](docs/BACKLOG.md) 4.5；需要宿主上传路由 + 附件存储 + 多模态能力探测）；
+- advisory 自动评估开关（manual / on-open / background）；
+- 决定附言（允许/拒绝时附一句原因给执行 AI）。
+
 ---
 
 ## 来源与许可

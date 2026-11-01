@@ -99,5 +99,7 @@ from the MIT-licensed DSH auto-review package and is automatically refreshed fro
 
 ## Status
 
-Personal project under active hardening; API and storage format may change before a public release.
+1.0.0 is the first public release. Planned for 1.1 (not included in 1.0): in-panel image/file upload
+(docs/BACKLOG.md 4.5), advisory auto-assessment options, and a decision note attached to allow/deny.
+
 See [CHANGELOG.md](CHANGELOG.md) and [docs/PUBLISHING.md](docs/PUBLISHING.md).
