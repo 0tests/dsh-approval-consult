@@ -4,6 +4,14 @@
   "license": "MIT",
   "type": "module",
   "description": "Approval consultation panel for DeepSeek Harness: while a tool call waits for approval, ask the executor AI and the auto-review AI independently, in two isolated channels with prompt-cache reuse.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0tests/dsh-approval-consult.git"
+  },
+  "homepage": "https://github.com/0tests/dsh-approval-consult#readme",
+  "bugs": {
+    "url": "https://github.com/0tests/dsh-approval-consult/issues"
+  },
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
