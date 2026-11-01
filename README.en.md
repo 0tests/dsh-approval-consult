@@ -87,6 +87,11 @@ Alternatively clone the repository and install its directory, or use `plugin_man
 See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the full matrix (DSH surface, optional plugins,
 browser fallbacks, data & privacy). Highlights:
 
+- **Web and DSH Desktop**: the desktop app runs the same DSH web application (same `ctx.webServer`, same
+  frontend, same `window.__ModuleLoader__` client protocol, same slots) behind the `dsh-app://app` custom
+  protocol, which proxies everything else to the local host server. No code change is needed — the plugin
+  just has to be installed into the `desktop` profile, which is the only profile the desktop app boots.
+  See [docs/DESKTOP.md](docs/DESKTOP.md).
 - Optional deps: `@deepseek-ai/dsh-experimental-auto-review` (reviewer channel),
   `dsh-approval-timeout` (countdown integration). Missing either degrades cleanly.
 - `shell.overlay` and `conversation.chat.turnTail` slots are required/optional respectively; missing

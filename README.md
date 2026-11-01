@@ -58,6 +58,9 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 让 Agent 用 `plugin_manager` 的 `install_bundle` 安装该 tarball / 目录 / npm 包（需要审批权限）。
 
+> **桌面端（DSH Desktop）**：桌面端内部是同一套 Web 应用，插件不用改代码，但要装进桌面端使用的
+> `desktop` profile（它只启动这一个 profile）。步骤与验收清单见 [`docs/DESKTOP.md`](docs/DESKTOP.md)。
+
 > 发布默认 `devWatch: false`、`devTools: false`（安全默认）。本地开发时可在 profile 的
 > `cordis.patch.yml` 覆盖：`- id: approval-consult` → `devWatch: true` / `devTools: true`。
 > 以本地目录（link）安装且打开 devWatch 时，`lib/impl.js` 改动会自动热重载；`lib/client.js` 的改动由
@@ -216,7 +219,10 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 兼容性与边界
 
-- **只适用于 Web 页面**（`shell.overlay` 槽位 + 同源路由）；Desktop/CLI 不会出现 UI，但宿主插件本身无副作用。
+- **Web 与桌面端（DSH Desktop）**：桌面端内部跑的是同一套 DSH Web 应用（同一 `ctx.webServer`、同一套前端与
+  `window.__ModuleLoader__` 客户端协议、同一批槽位），页面经 `dsh-app://app` 自定义协议反向代理到本地 host server。
+  因此插件不需要改代码，**只需要装进桌面端使用的 `desktop` profile**（桌面端只启动该 profile）。
+  安装方式与验证清单见 [`docs/DESKTOP.md`](docs/DESKTOP.md)。CLI / TUI 形态没有 UI，宿主插件本身无副作用。
 - **与 `dsh-approval-timeout` 的可选集成**：宿主通过插件注册表检测该插件是否在运行；未安装时 `/context.features.timeoutAvailable=false`，客户端**一次探测请求都不发**、不渲染任何倒计时相关内容（不会出现 "未安装" 提示，也不会产生 404 噪音）。已安装时只读探测 `/status`，按 `timeoutAutoPause` 策略决定是否调用 `/cancel`。注意该插件的 `/cancel` 是**全局**的（会取消所有待审批项的倒计时）：自动路径在探测到还有其它未取消的待审批项时会拒绝自动暂停并提示；只有用户手动点面板里的「暂停倒计时」才做全局取消（按钮 tooltip 已说明）。
 - **与官方 `@deepseek-ai/dsh-experimental-auto-review` 的可选依赖**：未安装时只保留执行 AI 通道（见上文）；已安装时两条通道都可用，且审查侧优先复用官方审查请求。
 - **常用问题持久化**：用户编辑后写入 `<dataDir>/presets.json`（默认 `~/.dsh-approval-consult`；UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。npm 安装升级不会覆盖用户配置，不写 profile patch。
@@ -254,6 +260,7 @@ dsh-approval-consult/
 │  ├─ PATCHES.md           # 对可选第三方插件（timeout）的本地补丁记录
 │  ├─ PUBLISHING.md        # 发布前检查清单
 │  ├─ ATTACHMENTS.md       # 图文上传（v1.1）技术方案（规划稿）
+│  ├─ DESKTOP.md           # 桌面端（DSH Desktop）适配说明
 │  ├─ BACKLOG.md           # 待办与未完成需求
 │  ├─ UI-NOTES.md          # 客户端自测表
 │  └─ assets/              # README 截图
