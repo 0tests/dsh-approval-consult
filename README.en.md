@@ -42,6 +42,9 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
   `~/.dsh-approval-consult/presets.json` (or the profile data dir when DSH runs with `--profile`;
   override with the `dataDir` config or `$DSH_APPROVAL_CONSULT_DATA`).
 - Read-only consultation history chip at the end of the chat turn (turnTail slot).
+- **Copy review opinion**: one click copies the review verdict/risk/tool/reason as plain text you can
+  paste into the chat for the executing AI. Purely local — no extra request; hidden when no auto-review
+  plugin is installed.
 - Survives plugin hot-reload: pending/thread state is kept in-process; approvals lost from memory can
   be rebuilt from the session log.
 

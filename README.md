@@ -176,6 +176,23 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 - 持久化：保存到用户数据目录的 `presets.json`（默认 `~/.dsh-approval-consult/presets.json`，可用 `dataDir` / `DSH_APPROVAL_CONSULT_DATA` 覆盖；原子写；`POST /presets`），优先级 **用户文件 > `config.presets` > 内置默认**；`POST /presets/reset` 删文件回到默认。
 - 保存后立即更新当前面板的 chips（宿主 `/context` 也同步），多标签页刷新后一致。
 
+### 8. 一键复制审查意见
+
+- 自动审查存在时，「本次审批」标题行右侧出现「复制意见」（`data-approval-consult-copy-opinion`）。
+- 复制出来的是一段可以直接粘进对话发给执行 AI 的纯文本，例如：
+
+  ```text
+  【自动审查意见】
+  结论：拒绝
+  风险：中
+  工具：pwsh
+  理由：该操作会不可逆地删除一个已存在的文件……误删会造成不可恢复的数据丢失。
+  ```
+
+- 内容只来自这次审批已经有的审查信息（结论/风险/工具/理由），**不发任何新请求**、不额外读取会话；
+  理由保留原文（含 Markdown）。复制成功有 toast，失败有错误 toast（剪贴板不可用时自动退回 `execCommand`）。
+- 缺自动审查插件时按钮根本不渲染，与「能力自适应」的其它部分一致。
+
 ---
 
 ## 宿主 HTTP 契约（同源、`connection.requestRejection` 鉴权）
