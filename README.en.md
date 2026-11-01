@@ -1,5 +1,8 @@
 # dsh-approval-consult
 
+[![ci](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml/badge.svg)](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > **English** · [中文主 README](README.md)
 
 An approval-consultation panel plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH Web).

@@ -1,5 +1,8 @@
 # 审批咨询台 · dsh-approval-consult
 
+[![ci](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml/badge.svg)](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > [English](README.en.md) · 中文
 >
 > 在 DSH（DeepSeek Harness）里，当某个工具调用正在等待你审批时，让你可以**分别**问「执行任务的 AI」和「自动审查 AI」，把风险问清楚再决定；有用的问答会自动留在会话里，不会“选完就忘”。
