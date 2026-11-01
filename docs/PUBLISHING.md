@@ -21,11 +21,12 @@
 
 ## 发布前还需要
 
-- [ ] **GitHub 仓库**：建仓库、`git init`、首提交；把 `docs/assets/` 的截图提交进去。
+- [x] **本地 git 仓库**：`git init -b main` + 首提交 `6715bf6`（35 个文件，`data/`/截图/日志已忽略）。
+- [ ] **GitHub 远程**：建远程仓库、`git remote add origin`、push；发布前再确认提交者身份（当前提交者
+      使用通用 `dsh-approval-consult <noreply@users.noreply.github.com>`，未泄露本机用户名）。
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
-- [ ] **npm 包名**：确认 `dsh-approval-consult` 可用（`npm view`；本机 npm 被 PowerShell 执行策略拦住，需用 `cmd /c npm view`）；
-      如不可用改 scoped（`@<user>/dsh-approval-consult`）并同步包内 `name`、README、安装示例。
-- [ ] **版本**：从 `0.x` 开始还是直接 `1.0.0`（当前 1.0.0；首个公开版本可考虑 0.1.0 以示 API 未冻结）。
+- [x] **npm 包名**：`dsh-approval-consult` 目前 **404（可用）**（2026-11-01 用 `cmd /c npm view` 确认）。
+- [ ] **版本**：当前 1.0.0；首个公开版本可考虑 0.1.0 以示 API 未冻结（需同步 CHANGELOG/README）。
 - [ ] **发布 dry-run**：`npm pack --dry-run` 检查 `files` 列表没有漏（`lib/`、`locale/`、`icon.svg`、`cordis.patch.yml`、LICENSE/NOTICE）。
 - [ ] **安装即用验证**：
       在一个干净 profile（`dsh` 新 profile）里 `install_bundle` 安装本包，不依赖任何本地开发文件；
@@ -34,11 +35,10 @@
       若不支持会退化为 fixed 层）、亮色主题、iPhone 真机键盘。
 - [ ] **License 合规复查**：确认 `lib/review-policy.txt` 的 MIT 归属已在 NOTICE 写明（已写），
       发行包内附 LICENSE + NOTICE。
-- [ ] **安全审查**：确认发布包不含 `data/`、日志、本机路径；`/debug/*` 默认不可用；
-      HTTP 路由全部经 `connection.requestRejection` 鉴权。
-- [ ] **文档**：把 `docs/VERIFICATION.md`、`docs/DOGFOOD.md`、`docs/PATCHES.md` 里的个人绝对路径
-      改写成相对路径或 `<profile>` 占位（`PATCHES.md` 是用户机器上的第三方补丁，发布仓库里应改成
-      可选的“已知问题与上游补丁建议”，不指向作者本机路径）。
+- [x] **安全审查**：`data/`、日志、本机绝对路径已从公开文档清理（2026-11-01 全仓扫描无残留）；
+      `/debug/*` 默认关闭；HTTP 路由全部经 `connection.requestRejection` 鉴权。
+- [x] **文档**：`VERIFICATION.md` / `DOGFOOD.md` / `PATCHES.md` / `UI-NOTES.md` 中的个人绝对路径
+      已替换为 `<workspace>` / `<DSH_HOME>` / `<user-home>` 占位（保留证据可读性）。
 - [ ] **社区文件**：`CONTRIBUTING.md`、Issue/PR 模板（可选）、`SECURITY.md`（可选）。
 
 ## 不在 1.0 范围（后续版本）
