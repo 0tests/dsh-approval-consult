@@ -236,6 +236,33 @@ test('用户数据目录：显式/覆盖 > profile 目录 > --profile > 用户�
   assert.ok(fallback.replace(/\\/g, '/').endsWith('.dsh-approval-consult'))
 })
 
+test('图片附件：文件名清洗 / MIME 白名单 / id 规整 / 字节估算', () => {
+  assert.equal(__test.sanitizeAttachmentName('..\\..\\secret.png'), '.. .. secret.png')
+  assert.equal(__test.sanitizeAttachmentName('  shot 01.png  '), 'shot 01.png')
+  assert.equal(__test.sanitizeAttachmentName('a\u0000b\u001f.png'), 'ab.png')
+  assert.equal(__test.sanitizeAttachmentName(''), '图片')
+  assert.equal(__test.sanitizeAttachmentName('x'.repeat(200)).length, 118)
+  assert.equal(__test.pickAttachmentMediaType('image/png'), 'image/png')
+  assert.equal(__test.pickAttachmentMediaType(' IMAGE/JPEG '), 'image/jpeg')
+  assert.equal(__test.pickAttachmentMediaType('image/webp'), 'image/webp')
+  assert.equal(__test.pickAttachmentMediaType('image/gif'), 'image/gif')
+  assert.equal(__test.pickAttachmentMediaType('image/heic'), null)
+  assert.equal(__test.pickAttachmentMediaType('application/pdf'), null)
+  assert.equal(__test.pickAttachmentMediaType(''), null)
+  assert.equal(__test.pickAttachmentMediaType(undefined), null)
+  assert.deepEqual(__test.clampAttachmentIds(['a', 'a', 'b', 'c', 'd'], 3), ['a', 'b', 'c'])
+  assert.deepEqual(__test.clampAttachmentIds(['a', 1, null, ' ', 'b'], 5), ['a', 'b'])
+  assert.deepEqual(__test.clampAttachmentIds('nope', 3), [])
+  assert.equal(__test.estimateAttachmentBytes([{ bytes: 100 }, { ref: { bytes: 250 } }, { bytes: 'x' }]), 350)
+  assert.equal(__test.estimateAttachmentBytes([]), 0)
+  assert.equal(__test.normalizeAttachmentForReviewer('on'), 'on')
+  assert.equal(__test.normalizeAttachmentForReviewer('off'), 'off')
+  assert.equal(__test.normalizeAttachmentForReviewer('auto'), 'auto')
+  assert.equal(__test.normalizeAttachmentForReviewer(true), 'on')
+  assert.equal(__test.normalizeAttachmentForReviewer(false), 'off')
+  assert.equal(__test.normalizeAttachmentForReviewer(undefined), 'auto')
+})
+
 /* -------------------------------------------------------------------------- */
 
 console.log(`\n${passed} passed, ${failed} failed`)
