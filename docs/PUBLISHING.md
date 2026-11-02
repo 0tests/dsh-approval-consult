@@ -1,7 +1,7 @@
 # 发布前检查清单（PUBLISHING）
 
 > 目标：把 `dsh-approval-consult` 作为独立、通用、可维护的开源 DSH 插件发布（npm + GitHub）。
-> 当前状态：**本地功能完成，尚未发布**。下面是发布前还缺的东西和已完成的项。
+> 当前状态：**v1.1.0 已发布 GitHub Release（tag `v1.1.0` / `e3a5799`，附 tgz）；npm 待登录后 `npm publish`**。
 
 ## 已完成（2026-11-01）
 
@@ -36,7 +36,9 @@
       未使用本机 `Administrator@ZEROTESTS-PC`。
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
 - [x] **npm 包名**：`dsh-approval-consult` 目前 **404（可用）**（2026-11-01 用 `cmd /c npm view` 确认）。
-- [ ] **版本**：当前 1.0.0；首个公开版本可考虑 0.1.0 以示 API 未冻结（需同步 CHANGELOG/README）。
+- [x] **版本**：v1.1.0（2026-11-03；含图文上传、复制意见、流式恢复、工具调用重试）。
+- [ ] **npm 发布**：包已 `npm pack` 验证（121,159 B / 13 文件），待 `npm login` 后
+      `npm publish --access public`（包名 `dsh-approval-consult` 确认可用）。
 - [x] **发布 dry-run**：`npm pack --dry-run` 通过（13 个文件、包体 104.7 kB；含 `lib/`、`locale/`、`icon.svg`、
       `cordis.patch.yml`、LICENSE/NOTICE/README，不含 `docs/assets` 与本地文件）。
 - [ ] **安装即用验证**：
@@ -59,6 +61,13 @@
 - advisory 自动评估开关（manual / on-open / background）。
 - “决定附言”（拒绝/允许时附一句原因给执行 AI）。
 - 真机 iPhone 键盘 / safe-area 回归、Firefox 兼容。
+
+## 发布记录
+
+| 版本 | 日期 | GitHub Release | 附件 | 备注 |
+| --- | --- | --- | --- | --- |
+| v1.0.0 | 2026-11-01 | `v1.0.0` | `dsh-approval-consult-1.0.0.tgz`（104,995 B） | 首个公开版本 |
+| v1.1.0 | 2026-11-03 | `v1.1.0`（`e3a5799`） | `dsh-approval-consult-1.1.0.tgz`（121,159 B，sha256 `50141171b11772616f2a66a782ccf769e401af87a4ab8ef46c2ee6fb8810b70e`） | 图文上传 / 复制意见 / 流式恢复 / 工具调用重试；npm 待发布 |
 
 ## 发布步骤（建议）
 
