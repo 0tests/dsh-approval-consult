@@ -36,16 +36,16 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.0.0**（[Release 说明](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.0.0)）。
+> 当前版本 **v1.1.0**（[Release 说明](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.0)）。
 > npm 包尚未发布；先装 Release 里的 tarball 即可，发布 npm 后同样的包名可直接安装。
 
 ### 方式 A：从 Release 安装（推荐）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
-   `dsh-approval-consult-1.0.0.tgz`；
+   `dsh-approval-consult-1.1.0.tgz`；
 2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
    或直接填下载链接
-   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.0.0/dsh-approval-consult-1.0.0.tgz`；
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.1.0/dsh-approval-consult-1.1.0.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
 ### 方式 B：本地目录（源码 / 开发）
@@ -259,7 +259,7 @@ dsh-approval-consult/
 │  ├─ DOGFOOD.md           # 真实使用记录与修复清单
 │  ├─ PATCHES.md           # 对可选第三方插件（timeout）的本地补丁记录
 │  ├─ PUBLISHING.md        # 发布前检查清单
-│  ├─ ATTACHMENTS.md       # 图文上传（v1.1）技术方案（规划稿）
+│  ├─ ATTACHMENTS.md       # 图文上传（v1.1 实现）技术方案
 │  ├─ DESKTOP.md           # 桌面端（DSH Desktop）适配说明
 │  ├─ BACKLOG.md           # 待办与未完成需求
 │  ├─ UI-NOTES.md          # 客户端自测表
@@ -304,13 +304,12 @@ npm test        # 宿主纯函数单测（25 项）+ zh/en locale 一致性
 界面迭代：URL 加 `?consult-demo=1`（或 `localStorage['dsh-approval-consult.demo']='1'`）进入演示模式：
 胶囊常显、面板用内置 mock 数据、问答本地伪造流式，不发真实请求。
 
-### 1.1 规划（1.0 不含）
+### 1.1 已发布 / 后续规划
 
-- 图文上传（规划稿：[`docs/ATTACHMENTS.md`](docs/ATTACHMENTS.md)）——复用宿主 `ctx.attachments`，
-  图片随侧调用发送且不破坏 prompt cache；
-- 一键复制审查意见（**已实现，待发版**）；
-- advisory 自动评估开关（manual / on-open / background）；
-- 决定附言（允许/拒绝时附一句原因给执行 AI）。
+- **1.1 已发布**：图文上传（[`docs/ATTACHMENTS.md`](docs/ATTACHMENTS.md)）、一键复制审查意见、
+  流式中断恢复、侧调用「只发工具调用」自动重试；
+- 后续（1.2+）：advisory 自动评估开关（manual / on-open / background）、决定附言（允许/拒绝时附一句原因给执行 AI）、
+  更多语言、首次安装引导。
 
 ---
 

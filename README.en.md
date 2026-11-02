@@ -52,10 +52,10 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 Requires DSH Web `0.2.1-rc.2` (tested) and Node `>=20`.
 
-Current version **v1.0.0** ([release notes](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.0.0)).
+Current version **v1.1.0** ([release notes](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.0)).
 The npm package is not published yet — install the release tarball:
 
-1. Download `dsh-approval-consult-1.0.0.tgz` from
+1. Download `dsh-approval-consult-1.1.0.tgz` from
    [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest).
 2. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin** and point it at the
    tarball's absolute path (or the download URL directly).
@@ -115,7 +115,8 @@ from the MIT-licensed DSH auto-review package and is automatically refreshed fro
 
 ## Status
 
-1.0.0 is the first public release. Planned for 1.1 (not included in 1.0): in-panel image/file upload
-(docs/BACKLOG.md 4.5), advisory auto-assessment options, and a decision note attached to allow/deny.
+1.1.0 adds in-panel image attachments (compatible with the shared DSH attachment store), a one-click
+"copy review opinion" action, interrupted-stream recovery, and a retry for side calls that only emit tool
+calls. Still planned: advisory auto-assessment options and a decision note attached to allow/deny.
 
 See [CHANGELOG.md](CHANGELOG.md) and [docs/PUBLISHING.md](docs/PUBLISHING.md).
