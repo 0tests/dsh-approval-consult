@@ -1,7 +1,7 @@
 # 发布前检查清单（PUBLISHING）
 
 > 目标：把 `dsh-approval-consult` 作为独立、通用、可维护的开源 DSH 插件发布（npm + GitHub）。
-> 当前状态：**v1.1.0 已发布 GitHub Release（tag `v1.1.0` / `e3a5799`，附 tgz）并发布到 npm**（`dsh-approval-consult@1.1.0`，2026-11-03）。
+> 当前状态：**v1.1.1 已发布 GitHub Release（tag `v1.1.1`）并发布到 npm**（`dsh-approval-consult@1.1.1`，2026-11-03）。
 
 ## 已完成（2026-11-01）
 
@@ -67,7 +67,8 @@
 | 版本 | 日期 | GitHub Release | 附件 | 备注 |
 | --- | --- | --- | --- | --- |
 | v1.0.0 | 2026-11-01 | `v1.0.0` | `dsh-approval-consult-1.0.0.tgz`（104,995 B） | 首个公开版本 |
-| v1.1.0 | 2026-11-03 | `v1.1.0`（`e3a5799`） | `dsh-approval-consult-1.1.0.tgz`（121,159 B，sha256 `50141171b11772616f2a66a782ccf769e401af87a4ab8ef46c2ee6fb8810b70e`） | 图文上传 / 复制意见 / 流式恢复 / 工具调用重试；npm 待发布 |
+| v1.1.0 | 2026-11-03 | `v1.1.0`（`e3a5799`） | `dsh-approval-consult-1.1.0.tgz`（121,159 B） | 图文上传 / 复制意见 / 流式恢复 / 工具调用重试；npm 已发布 |
+| v1.1.1 | 2026-11-03 | `v1.1.1` | `dsh-approval-consult-1.1.1.tgz` | 修复面板刷新后图片缩略图消失（客户端） |
 
 ## 发布步骤（建议）
 
