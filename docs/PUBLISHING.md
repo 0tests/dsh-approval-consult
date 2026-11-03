@@ -1,7 +1,7 @@
 # 发布前检查清单（PUBLISHING）
 
 > 目标：把 `dsh-approval-consult` 作为独立、通用、可维护的开源 DSH 插件发布（npm + GitHub）。
-> 当前状态：**v1.1.1 已发布 GitHub Release（tag `v1.1.1`）并发布到 npm**（`dsh-approval-consult@1.1.1`，2026-11-03）。
+> 当前状态：**v1.1.2 已发布 GitHub Release（tag `v1.1.2`）并发布到 npm**（`dsh-approval-consult@1.1.2`，2026-11-03；含 2026-11-03 安全审查的 4 项修复）。
 
 ## 已完成（2026-11-01）
 
@@ -69,6 +69,7 @@
 | v1.0.0 | 2026-11-01 | `v1.0.0` | `dsh-approval-consult-1.0.0.tgz`（104,995 B） | 首个公开版本 |
 | v1.1.0 | 2026-11-03 | `v1.1.0`（`e3a5799`） | `dsh-approval-consult-1.1.0.tgz`（121,159 B） | 图文上传 / 复制意见 / 流式恢复 / 工具调用重试；npm 已发布 |
 | v1.1.1 | 2026-11-03 | `v1.1.1` | `dsh-approval-consult-1.1.1.tgz` | 修复面板刷新后图片缩略图消失（客户端） |
+| v1.1.2 | 2026-11-03 | `v1.1.2` | `dsh-approval-consult-1.1.2.tgz` | 安全修复：审查记录关联、并发上限、重新评估去重、附件超额先拒 |
 
 ## 发布步骤（建议）
 
