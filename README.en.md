@@ -53,7 +53,7 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 Requires DSH Web `0.2.1-rc.2` (tested) and Node `>=20`.
 
-Current version **v1.1.2**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.2).
+Current version **v1.1.3**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.3).
 
 ```bash
 npm install dsh-approval-consult
@@ -61,7 +61,7 @@ npm install dsh-approval-consult
 
 Or install the release tarball:
 
-1. Download `dsh-approval-consult-1.1.2.tgz` from
+1. Download `dsh-approval-consult-1.1.3.tgz` from
    [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest).
 2. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin** and point it at the
    tarball's absolute path (or the download URL directly).

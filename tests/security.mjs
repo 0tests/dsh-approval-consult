@@ -35,14 +35,21 @@ const check = (label) => {
   const other = review('shell', { command: 'echo same' }, 'B')
   state.reviews = new Map([['A', [review('different-tool', {}, 'A')]], ['B', [other]]])
   assert.equal(match('A', 'shell', { args: { command: 'echo same' } }, ''), null)
+  // 参数已知且明确不一致：即使理由文字命中也不复用（理由不能替代调用身份）。
   const reasonHit = review('shell', { command: 'echo x' }, 'A')
   reasonHit.decision.reason = '这条命令会不可逆地删除工作区之外的文件，需要人工确认'
   state.reviews = new Map([['A', [reasonHit]]])
   assert.equal(
     match('A', 'shell', { args: { command: 'other' } }, `Auto review denied tool "shell": ${reasonHit.decision.reason}`),
+    null,
+  )
+  // 参数未知时，才允许用「理由原样命中」作为弱证据。
+  state.reviews = new Map([['A', [reasonHit]]])
+  assert.equal(
+    match('A', 'shell', undefined, `Auto review denied tool "shell": ${reasonHit.decision.reason}`),
     reasonHit,
   )
-  check('matchReview: 参数不一致 / 跨 session 不复用，参数一致或理由命中才复用')
+  check('matchReview: 参数冲突一律不复用；参数未知时才用理由命中；跨 session 不复用')
 }
 
 // 2) startAsk 并发名额（await 之后复核）
@@ -155,6 +162,119 @@ const check = (label) => {
   for (let i = 0; i < 5; i += 1) await assert.rejects(handler({ method: 'POST', headers: {} }, {}), (e) => e.status === 413)
   assert.equal(saved, 0)
   check('附件上传：名额已满时在 saveImage 之前拒绝，不消耗存储')
+}
+
+// 5) 重新评估失败后重试：新输出不得被旧缓冲污染
+{
+  let calls = 0
+  const rev = { decision: null, options: {}, text: '', error: null }
+  const classify = fn('classifyAdvisoryReview', {
+    ensureAdvisoryReview: () => rev,
+    httpError,
+    AbortController,
+    setTimeout,
+    clearTimeout,
+    state: { sideOptions: new WeakSet(), stats: { sideCalls: 0 } },
+    ctx: {
+      llm: {
+        stream: async function* () {
+          calls += 1
+          if (calls === 1) {
+            yield { type: 'text-delta', text: '{"risk":' }
+            throw new Error('connection interrupted')
+          }
+          yield { type: 'text-delta', text: '{"risk":"high","decision":"deny"}' }
+        },
+      },
+    },
+    noteError: () => {},
+    friendlySideCallError: String,
+  })
+  await classify({ resolvedAt: null })
+  assert.equal(rev.decision, null)
+  assert.match(String(rev.error), /connection interrupted/)
+  await classify({ resolvedAt: null })
+  assert.equal(rev.text, '{"risk":"high","decision":"deny"}')
+  assert.equal(rev.decision?.decision, 'deny')
+  assert.equal(rev.error, null)
+  check('classifyAdvisoryReview: 失败重试使用独立缓冲，正常结果可解析')
+}
+
+// 6) 上传跨过审批结束边界：不登记、不可再读
+{
+  const record = { key: 'ac:test', sessionId: 'A', resolvedAt: null }
+  const state = {
+    attachments: new Map(),
+    attachmentPending: new Map(),
+    pendings: new Map([[record.key, record]]),
+    jobs: new Map(),
+    stats: { attachments: 0 },
+  }
+  const cfg = { attachmentsEnabled: true, maxAttachmentBytes: 1024, maxAttachmentsPerConsult: 3 }
+  const attachmentsForConsult = (key) => [...state.attachments.values()].filter((x) => x.consultKey === key)
+  const pendingAttachmentCount = (key) => state.attachmentPending.get(key) ?? 0
+  const reserveAttachmentSlot = (key) => {
+    const existing = attachmentsForConsult(key).length
+    const pending = pendingAttachmentCount(key)
+    if (existing + pending >= cfg.maxAttachmentsPerConsult) throw httpError(413, 'attachment-too-many', 'too many')
+    state.attachmentPending.set(key, pending + 1)
+  }
+  const releaseAttachmentSlot = (key) => {
+    const pending = pendingAttachmentCount(key)
+    if (pending <= 1) state.attachmentPending.delete(key)
+    else state.attachmentPending.set(key, pending - 1)
+  }
+  const registerAttachment = fn('registerAttachment', { state, cfg, httpError, attachmentsForConsult })
+  let release
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  let response = null
+  let imageRead = false
+  let query = new URLSearchParams('sessionId=A&consultKey=ac:test&mediaType=image/png')
+  const marker = 'route(`${ROUTE_PREFIX}/attachment`, '
+  const start = src.indexOf(marker) + marker.length
+  const end = src.indexOf('\n      }),', start) + '\n      }'.length
+  const handler = vm.runInNewContext(`(${src.slice(start, end)})`, {
+    state,
+    cfg,
+    httpError,
+    queryOf: () => query,
+    pickAttachmentMediaType: helpers.pickAttachmentMediaType,
+    resolvePending: () => record,
+    readBinaryBody: async () => {
+      await gate
+      return Buffer.from('mock image')
+    },
+    MAX_ATTACHMENT_BODY_BYTES: 1024,
+    sanitizeAttachmentName: helpers.sanitizeAttachmentName,
+    attachmentStore: {
+      saveImage: async () => ({ mediaType: 'image/png' }),
+      readImage: async () => {
+        imageRead = true
+        return { data: Buffer.from('mock'), ref: { mediaType: 'image/png' } }
+      },
+    },
+    registerAttachment,
+    reserveAttachmentSlot,
+    releaseAttachmentSlot,
+    attachmentMeta: (item) => ({ id: item.id, mediaType: 'image/png' }),
+    sendJson: (_res, status, body) => {
+      response = { status, body }
+    },
+    sendImage: () => {},
+  })
+  const upload = handler({ method: 'POST', headers: {} }, {})
+  record.resolvedAt = Date.now() // 上传等待请求体期间审批结束
+  release()
+  await assert.rejects(upload, (e) => e.status === 409)
+  assert.equal(state.attachments.size, 0)
+  // 即使手工塞入引用，审批结束后 GET 也必须失效
+  state.attachments.set('att:x', { id: 'att:x', ref: { mediaType: 'image/png' }, consultKey: record.key, expiresAt: Date.now() + 60_000 })
+  query = new URLSearchParams({ id: 'att:x', consultKey: record.key })
+  await assert.rejects(handler({ method: 'GET' }, {}), (e) => e.status === 404)
+  assert.equal(imageRead, false)
+  check('附件上传：审批结束边界后不登记；已结束审批的引用不可读')
 }
 
 console.log(`\nsecurity regression ok: ${passed} 项`)
