@@ -1,7 +1,7 @@
 # 发布前检查清单（PUBLISHING）
 
 > 目标：把 `dsh-approval-consult` 作为独立、通用、可维护的开源 DSH 插件发布（npm + GitHub）。
-> 当前状态：**v1.1.0 已发布 GitHub Release（tag `v1.1.0` / `e3a5799`，附 tgz）；npm 待登录后 `npm publish`**。
+> 当前状态：**v1.1.0 已发布 GitHub Release（tag `v1.1.0` / `e3a5799`，附 tgz）并发布到 npm**（`dsh-approval-consult@1.1.0`，2026-11-03）。
 
 ## 已完成（2026-11-01）
 
@@ -37,8 +37,8 @@
 - [x] **README 双语**：`README.md`（中文，主）+ `README.en.md`（英文简版）；截图改用相对路径。
 - [x] **npm 包名**：`dsh-approval-consult` 目前 **404（可用）**（2026-11-01 用 `cmd /c npm view` 确认）。
 - [x] **版本**：v1.1.0（2026-11-03；含图文上传、复制意见、流式恢复、工具调用重试）。
-- [ ] **npm 发布**：包已 `npm pack` 验证（121,159 B / 13 文件），待 `npm login` 后
-      `npm publish --access public`（包名 `dsh-approval-consult` 确认可用）。
+- [x] **npm 发布**：`dsh-approval-consult@1.1.0`（2026-11-03，13 文件 / 451 KB 解包；`latest` 标签）。
+      首次发布走的是 npm 新的 staged publish 流程：注册表先出现 `0.0.0-stage` 占位，随后 `1.1.0` 生效。
 - [x] **发布 dry-run**：`npm pack --dry-run` 通过（13 个文件、包体 104.7 kB；含 `lib/`、`locale/`、`icon.svg`、
       `cordis.patch.yml`、LICENSE/NOTICE/README，不含 `docs/assets` 与本地文件）。
 - [ ] **安装即用验证**：

@@ -2,6 +2,7 @@
 
 [![ci](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml/badge.svg)](https://github.com/0tests/dsh-approval-consult/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/dsh-approval-consult.svg)](https://www.npmjs.com/package/dsh-approval-consult)
 
 > [English](README.en.md) · 中文
 >
@@ -36,10 +37,16 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.1.0**（[Release 说明](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.0)）。
-> npm 包尚未发布；先装 Release 里的 tarball 即可，发布 npm 后同样的包名可直接安装。
+> 当前版本 **v1.1.0**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.0)。
+> `npm install dsh-approval-consult`，或让 Agent 用 `plugin_manager` 安装这个包名；下面也保留了 tarball / 本地目录两种方式。
 
-### 方式 A：从 Release 安装（推荐）
+### 方式 A：npm
+
+1. `npm install dsh-approval-consult`（或让 Agent 用 `plugin_manager` 的 `install_bundle` 安装 npm 包名）；
+2. 在 DSH Web 的「插件」里启用；
+3. 重启一次 `dsh web` 更稳。
+
+### 方式 B：从 Release 安装（tarball）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
    `dsh-approval-consult-1.1.0.tgz`；
@@ -48,13 +55,13 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
    `https://github.com/0tests/dsh-approval-consult/releases/download/v1.1.0/dsh-approval-consult-1.1.0.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
-### 方式 B：本地目录（源码 / 开发）
+### 方式 C：本地目录（源码 / 开发）
 
 1. `git clone https://github.com/0tests/dsh-approval-consult`；
 2. 打开 DSH Web →「插件」→「添加插件」→「安装第三方插件」，输入该目录的绝对路径；
 3. 安装完成后点「立即启用」。
 
-### 方式 C：CLI / 会话内
+### 方式 D：CLI / 会话内
 
 让 Agent 用 `plugin_manager` 的 `install_bundle` 安装该 tarball / 目录 / npm 包（需要审批权限）。
 
