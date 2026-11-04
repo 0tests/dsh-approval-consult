@@ -37,7 +37,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.1.4**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.4)。
+> 当前版本 **v1.1.5**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.5)。
 > `npm install dsh-approval-consult`，或让 Agent 用 `plugin_manager` 安装这个包名；下面也保留了 tarball / 本地目录两种方式。
 
 ### 方式 A：npm
@@ -49,10 +49,10 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 ### 方式 B：从 Release 安装（tarball）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
-   `dsh-approval-consult-1.1.4.tgz`；
+   `dsh-approval-consult-1.1.5.tgz`；
 2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
    或直接填下载链接
-   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.1.4/dsh-approval-consult-1.1.4.tgz`；
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.1.5/dsh-approval-consult-1.1.5.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
 ### 方式 C：本地目录（源码 / 开发）

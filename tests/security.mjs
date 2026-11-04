@@ -13,7 +13,8 @@ function fn(name, env) {
   const start = src.search(new RegExp(`^  (?:async )?function ${name}\\(`, 'm'))
   assert.ok(start >= 0, `missing ${name}`)
   const end = src.indexOf('\n  }', start) + 4
-  return vm.runInNewContext(`(${src.slice(start, end)})`, { ...helpers, ...env })
+  // 单函数测试隔离宿主日志；完整的刷新/路由交互另由 security-lifecycle.mjs 覆盖。
+  return vm.runInNewContext(`(${src.slice(start, end)})`, { ...helpers, refreshReconstructed: (record) => record, ...env })
 }
 const httpError = (status, code, message) => Object.assign(new Error(message), { status, code })
 const review = (name, args, sessionId) => ({ sessionId, claimedBy: null, error: null, action: { name, arguments: args }, decision: { risk: 'low', decision: 'allow' }, at: Date.now() })
@@ -140,6 +141,7 @@ const check = (label) => {
   const start = src.indexOf(marker) + marker.length
   const end = src.indexOf('\n      }),', start) + '\n      }'.length
   const handler = vm.runInNewContext(`(${src.slice(start, end)})`, {
+    refreshReconstructed: (record) => record,
     state,
     cfg: { attachmentsEnabled: true, maxAttachmentBytes: 1024 },
     httpError,
@@ -236,6 +238,7 @@ const check = (label) => {
   const start = src.indexOf(marker) + marker.length
   const end = src.indexOf('\n      }),', start) + '\n      }'.length
   const handler = vm.runInNewContext(`(${src.slice(start, end)})`, {
+    refreshReconstructed: (record) => record,
     state,
     cfg,
     httpError,
