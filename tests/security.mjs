@@ -277,4 +277,55 @@ const check = (label) => {
   check('附件上传：审批结束边界后不登记；已结束审批的引用不可读')
 }
 
+// 7) 从日志重建的审批记录：命中缓存时同步结果并执行统一清理
+{
+  const record = {
+    key: 're:1',
+    reconstructed: true,
+    approvalId: 'ap:1',
+    sessionId: 'A',
+    resolvedAt: null,
+    outcome: null,
+    jobs: new Set(),
+    threads: { executor: [], reviewer: [] },
+    relays: [],
+    review: null,
+    advisoryReview: null,
+  }
+  const state = {
+    pendings: new Map([[record.key, record]]),
+    pendingBySession: new Map([['A', [record.key]]]),
+    jobs: new Map(),
+    attachments: new Map([['att:1', { consultKey: record.key }]]),
+    stats: {},
+  }
+  const dropAttachments = (key) => {
+    for (const [id, item] of [...state.attachments]) {
+      if (item.consultKey === key) state.attachments.delete(id)
+    }
+  }
+  const finalizePending = fn('finalizePending', { state, dropAttachments, log: { info() {} }, noteError() {} })
+  const agent = {
+    session: {
+      snapshotEvents: () => [{ type: 'approval/decided', data: { id: 'ap:1', outcome: 'deny' } }],
+    },
+  }
+  const refreshReconstructed = fn('refreshReconstructed', {
+    finalizePending,
+    liveAgentBySessionId: () => agent,
+    noteError() {},
+  })
+  const resolvePending = fn('resolvePending', {
+    state,
+    refreshReconstructed,
+    reconstructPending: () => null,
+  })
+  const found = resolvePending({ consultKey: 're:1' })
+  assert.equal(found, record)
+  assert.notEqual(record.resolvedAt, null)
+  assert.equal(record.outcome, 'deny')
+  assert.equal(state.attachments.size, 0)
+  check('重建记录命中缓存时同步审批结果，并统一执行结束清理')
+}
+
 console.log(`\nsecurity regression ok: ${passed} 项`)
