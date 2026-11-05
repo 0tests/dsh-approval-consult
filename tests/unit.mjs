@@ -217,9 +217,9 @@ test('插件检测按名字匹配 auto-review / approval-timeout', () => {
 
 test('从审批理由提取 auto-review 结论（拒绝/失败）', () => {
   const denied = __test.autoReviewVerdictFromReason('Auto review denied tool "edit": 改动第三方插件源码需要用户明确授权。')
-  assert.deepEqual(denied, { kind: 'deny', text: '改动第三方插件源码需要用户明确授权。' })
+  assert.deepEqual(denied, { kind: 'deny', toolName: 'edit', text: '改动第三方插件源码需要用户明确授权。' })
   const failed = __test.autoReviewVerdictFromReason('Auto review of tool "pwsh" failed; its body was not executed: TRANSPORT: Connection error')
-  assert.deepEqual(failed, { kind: 'failed', text: 'TRANSPORT: Connection error' })
+  assert.deepEqual(failed, { kind: 'failed', toolName: 'pwsh', text: 'TRANSPORT: Connection error' })
   assert.equal(__test.autoReviewVerdictFromReason('普通审批理由'), null)
   assert.equal(__test.autoReviewVerdictFromReason(undefined), null)
   assert.equal(__test.autoReviewVerdictFromReason('Auto review denied tool "edit": '), null)

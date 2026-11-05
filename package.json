@@ -1,6 +1,6 @@
 {
   "name": "dsh-approval-consult",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "license": "MIT",
   "type": "module",
   "description": "Approval consultation panel for DeepSeek Harness: while a tool call waits for approval, ask the executor AI and the auto-review AI independently, in two isolated channels with prompt-cache reuse.",
@@ -38,11 +38,19 @@
     "check": "node --check lib/impl.js && node --check lib/client.js && node --check lib/index.js"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "compatibility": {
+      "dsh": ">=0.2.1-rc.2 <0.3.0-0",
+      "dshReleases": {
+        "0.2.1-rc.2": "compatible",
+        "0.2.2-rc.1": "compatible"
+      }
     },
     "client": {
       "platform": "web",

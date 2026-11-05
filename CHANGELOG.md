@@ -2,6 +2,38 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0] - 2026-11-05
+
+### 适配
+
+- 支持 **DSH Web 0.2.2-rc.1**（已在该版本实机验证：插件加载、工具调用、审批卡、自动审查；0.2.1-rc.2 仍兼容）。
+- 新增 `engines.dsh` 与 `dsh.compatibility`（dshReleases）声明，供 0.2.2 插件管理器判断兼容性。
+- 文档补充 0.2.2 的宿主要求：原生工具执行拆成独立插件，profile 需挂载
+  `@deepseek-ai/dsh-tool-executor-native`（这是宿主配置，不是本插件依赖）。
+
+### 安全加固（2026-11-05 独立审计：0 项 P1 / 2 项 P2 / 9 项 P3）
+
+- **[P2-1] 会话归属校验**：`resolvePending()` 强制要求 `sessionId` 且与记录归属一致（省略不能绕过）；
+  `/poll` 必须带 `consultKey` 并校验归属；`/attachment` GET/drop、`/cancel`、`/history` 全部绑定
+  `sessionId`/`consultKey`；`consultKey`/`jobId`/`threadId` 改为随机 UUID，消除盲扫。
+- **[P2-2] 诊断与历史脱敏**：`/diag` 默认只返回聚合计数与能力开关（`devTools=true` 才返回会话 ID/键/路径）；
+  `/history` 支持 `consultKey` 过滤，审查能力关闭时不返回审查线程/结论。
+- **[P3] `/relay` 注入面**：只允许转达服务端已保存的审查回答（文本必须等于 `turn.answer`），
+  同一回答只能转达一次，每条审批最多 5 次，`kind` 严格白名单。
+- **[P3] 哨兵可伪造**：`SIDE_SENTINEL` 改为每进程随机 UUID，用户/模型无法预知。
+- **[P3] 合成审查伪造**：理由中的 `Auto review denied tool "<name>"` 必须与当前工具名一致才合成，
+  且 reviewer 提示词不再标注 authoritative。
+- **[P3] 重建记录生命周期缺口**：agent 离线时回退 `ctx.sessions` 读取日志；未结束记录超过 24h
+  由 sweep 按 cancelled 结束并清理附件。
+- **[P3] 附件与资源**：累计上传预算（24 MiB/审批，drop 不重置）；读体后/保存后复核审批状态；
+  慢上传 `close` 立即失败并释放名额；线程上限、转达上限、重新评估上限；主请求/工具调用捕获 2h TTL。
+- **[P3] 实时记录同步**：`recordPending()` 从会话日志绑定 `approvalId`，1 秒后台同步同样覆盖实时记录。
+
+### 修复
+
+- 只带图提问会自动补默认问题（此前返回 400 `empty-question`）。
+- 回归测试：`tests/security.mjs` 扩到 **15 项**，`tests/security-lifecycle.mjs` 保持 13 项。
+
 ## [1.1.5] - 2026-11-04
 
 ### 安全修复

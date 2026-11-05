@@ -37,7 +37,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.1.5**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.1.5)。
+> 当前版本 **v1.2.0**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.0)。
 > `npm install dsh-approval-consult`，或让 Agent 用 `plugin_manager` 安装这个包名；下面也保留了 tarball / 本地目录两种方式。
 
 ### 方式 A：npm
@@ -49,10 +49,10 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 ### 方式 B：从 Release 安装（tarball）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
-   `dsh-approval-consult-1.1.5.tgz`；
+   `dsh-approval-consult-1.2.0.tgz`；
 2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
    或直接填下载链接
-   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.1.5/dsh-approval-consult-1.1.5.tgz`；
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.2.0/dsh-approval-consult-1.2.0.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
 ### 方式 C：本地目录（源码 / 开发）
@@ -230,6 +230,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
   `window.__ModuleLoader__` 客户端协议、同一批槽位），页面经 `dsh-app://app` 自定义协议反向代理到本地 host server。
   因此插件不需要改代码，**只需要装进桌面端使用的 `desktop` profile**（桌面端只启动该 profile）。
   安装方式与验证清单见 [`docs/DESKTOP.md`](docs/DESKTOP.md)。CLI / TUI 形态没有 UI，宿主插件本身无副作用。
+- **DSH 版本**：已验证 `0.2.1-rc.2` 与 `0.2.2-rc.1`（Web profile）。0.2.2 把原生 / PTC 工具执行拆成独立插件，宿主 profile 需要挂载 `@deepseek-ai/dsh-tool-executor-native` 后原生工具才会注册（这是宿主配置，不是本插件的依赖）；本插件用到的 `tools/pre-execute`、`approval/request`、`llm/stream`、`agent.inject()` 与客户端槽位在 0.2.2-rc.1 均保持不变。
 - **与 `dsh-approval-timeout` 的可选集成**：宿主通过插件注册表检测该插件是否在运行；未安装时 `/context.features.timeoutAvailable=false`，客户端**一次探测请求都不发**、不渲染任何倒计时相关内容（不会出现 "未安装" 提示，也不会产生 404 噪音）。已安装时只读探测 `/status`，按 `timeoutAutoPause` 策略决定是否调用 `/cancel`。注意该插件的 `/cancel` 是**全局**的（会取消所有待审批项的倒计时）：自动路径在探测到还有其它未取消的待审批项时会拒绝自动暂停并提示；只有用户手动点面板里的「暂停倒计时」才做全局取消（按钮 tooltip 已说明）。
 - **与官方 `@deepseek-ai/dsh-experimental-auto-review` 的可选依赖**：未安装时只保留执行 AI 通道（见上文）；已安装时两条通道都可用，且审查侧优先复用官方审查请求。
 - **常用问题持久化**：用户编辑后写入 `<dataDir>/presets.json`（默认 `~/.dsh-approval-consult`；UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。npm 安装升级不会覆盖用户配置，不写 profile patch。

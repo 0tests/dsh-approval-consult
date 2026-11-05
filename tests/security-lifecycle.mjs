@@ -73,7 +73,7 @@ function host() {
   }
   const post = (path, body) => { const request = begin(path, 'POST'); request.send(body); return request.promise }
   const uploadUrl = (key) => `/attachment?sessionId=A&consultKey=${encodeURIComponent(key)}&mediaType=image/png`
-  const imageUrl = (key, id) => `/attachment?consultKey=${encodeURIComponent(key)}&id=${encodeURIComponent(id)}`
+  const imageUrl = (key, id) => `/attachment?sessionId=A&consultKey=${encodeURIComponent(key)}&id=${encodeURIComponent(id)}`
   return {
     begin, post, llm, storage, injections, uploadUrl, imageUrl,
     get saves() { return saves }, get reads() { return reads }, get snapshots() { return snapshots },
@@ -158,7 +158,7 @@ await test('模型图片能力查询期间结束，不启动侧调用', async (h
   h.captureMain()
   const gate = deferred(), started = deferred()
   h.llm.resolveModelInfo = async () => { started.resolve(); await gate.promise; return { inputModalities: ['image'] } }
-  const request = h.post('/ask', { consultKey: key, question: 'test', attachmentIds: [uploaded.body.attachment.id] })
+  const request = h.post('/ask', { consultKey: key, sessionId: 'A', question: 'test', attachmentIds: [uploaded.body.attachment.id] })
   await started.promise; h.decide(); gate.resolve()
   assert.equal((await request).status, 409)
   assert.equal(h.state.jobs.size, 0)
@@ -183,7 +183,7 @@ for (const trigger of ['poll', 'background']) {
     const key = await h.rebuild()
     h.captureMain()
     const model = abortableModel(h)
-    const ask = await h.post('/ask', { consultKey: key, question: 'test' })
+    const ask = await h.post('/ask', { consultKey: key, sessionId: 'A', question: 'test' })
     assert.equal(ask.status, 200)
     await model.started
     h.decide()
@@ -191,7 +191,7 @@ for (const trigger of ['poll', 'background']) {
       h.tick()
       assert.equal(model.signal.aborted, true, 'background must cancel before any poll request')
     }
-    const poll = await h.begin(`/poll?jobId=${ask.body.jobId}`).promise
+    const poll = await h.begin(`/poll?jobId=${ask.body.jobId}&consultKey=${encodeURIComponent(key)}`).promise
     assert.equal(poll.body.status, 'cancelled')
     assert.equal(model.signal.aborted, true)
     assert.equal(h.injections.length, 0)
@@ -200,7 +200,7 @@ for (const trigger of ['poll', 'background']) {
 
 await test('没有客户端查询时，后台独立取消重新评估', async (h) => {
   const key = await h.rebuild(), model = abortableModel(h)
-  const review = h.post('/review', { consultKey: key })
+  const review = h.post('/review', { consultKey: key, sessionId: 'A' })
   await model.started
   h.decide(); h.tick()
   assert.equal(model.signal.aborted, true)
@@ -212,7 +212,7 @@ await test('模型先于下一次后台轮询返回，也不注入过期回答',
   const key = await h.rebuild(), gate = deferred()
   h.captureMain()
   h.llm.stream = async function* () { await gate.promise; yield { type: 'text-delta', text: 'mock' } }
-  const ask = await h.post('/ask', { consultKey: key, question: 'test' })
+  const ask = await h.post('/ask', { consultKey: key, sessionId: 'A', question: 'test' })
   h.decide(); gate.resolve()
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(h.state.jobs.get(ask.body.jobId).status, 'cancelled')
@@ -225,7 +225,7 @@ await test('重新评估先于后台轮询返回，不接受审批结束后的�
     started.resolve(); await gate.promise
     yield { type: 'text-delta', text: '{"risk":"low","decision":"allow"}' }
   }
-  const review = h.post('/review', { consultKey: key })
+  const review = h.post('/review', { consultKey: key, sessionId: 'A' })
   await started.promise; h.decide(); gate.resolve()
   assert.equal((await review).body.ok, false)
   assert.equal(h.state.pendings.get(key).advisoryReview.decision, null)
@@ -254,7 +254,7 @@ await test('存储失败释放配额，后续成功上传；鉴权守卫保留',
 
 await test('卸载时停止后台检查并取消进行中的重新评估', async (h) => {
   const key = await h.rebuild(), model = abortableModel(h)
-  const review = h.post('/review', { consultKey: key })
+  const review = h.post('/review', { consultKey: key, sessionId: 'A' })
   await model.started
   h.dispose()
   assert.equal(model.signal.aborted, true)

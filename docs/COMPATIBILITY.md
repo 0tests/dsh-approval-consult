@@ -1,18 +1,29 @@
 # 兼容性说明（COMPATIBILITY）
 
-> 最后更新：2026-11-01。目标：在没有本插件作者的机器上也能装、能跑、不把宿主弄坏。
+> 最后更新：2026-11-05。目标：在没有本插件作者的机器上也能装、能跑、不把宿主弄坏。
 
 ## 1. 运行环境矩阵
 
 | 项 | 已验证 | 说明 / 兜底 |
 | --- | --- | --- |
-| DSH 实现 | `0.2.1-rc.2`（Web profile） | 依赖的扩展面见下表；rc 版本之间字段可能变，升级后跑一遍自检 |
-| Node | `>=20.0.0`（`package.json` engines） | 宿主实现只用 Node 内置模块（`node:fs`/`node:path`/`node:url`/`node:crypto`） |
+| DSH 实现 | `0.2.1-rc.2`、`0.2.2-rc.1`（Web profile） | 依赖的扩展面见下表；rc 版本之间字段可能变，升级后跑一遍自检 |
+| Node | `>=20.0.0`（`package.json` engines） | 宿主实现只用 Node 内置模块（`node:fs`/`node:path`/`node:url`/`node:crypto`）；注意 DSH 0.2.2 宿主本身要求 Node >=24.9 |
 | OS | Windows 11（真实），路径处理用 `node:path` | 无平台专属调用；macOS/Linux 预期可用（未实机验证，CI 跑 Ubuntu/Windows） |
 | 浏览器 | Microsoft Edge / Chrome（Chromium 120+） | 依赖 `HTMLElement.showPopover` 时自动降级为 fixed 层；`color-mix()` 失败时回退到 CSS 变量兜底色 |
 | 屏幕 | 桌面 1440×900 / 2552×1234；手机 390×844 | 面板宽度 `min(468px, 100%)`；窄屏为底部弹层 |
 | 主题 | 深色、浅色（token）、自定义壁纸主题（`--dsw-alias-bg-base: transparent`） | 面板自带不透明表面色，不依赖可能透明的主题底色 |
-| 语言 | 简体中文、English（186 个 key 完全对齐） | 跟随 DSH locale；`ctx.locale.bind(NS)` 提供文案；缺少 key 时回退 key 字符串 |
+| 语言 | 简体中文、English（212 个 key 完全对齐） | 跟随 DSH locale；`ctx.locale.bind(NS)` 提供文案；缺少 key 时回退 key 字符串 |
+
+## 1.1 DSH 0.2.2 的额外宿主要求
+
+0.2.2 把「原生工具执行 / PTC 工具执行」拆成了独立插件。只升级 DSH 而不挂载执行器时，
+宿主的原生工具不会注册（agent 工具列表会少掉一批，`pwsh` 等会变成 `unknown tool`，
+自动审查也会报 `pending native tool schema is missing or ambiguous`）。这是**宿主配置问题**，
+与本插件无关；插件只要求：
+
+- 原生工具执行已挂载：`@deepseek-ai/dsh-tool-executor-native`（在 profile 的 composition /
+  `cordis.patch.yml` 里与 `dsh-tools` 同 scope 插入）；
+- 本插件依赖的扩展面（见第 2 节）在 0.2.2-rc.1 中签名不变（已核对 `.d.ts` 与实机冒烟）。
 
 ## 2. DSH 扩展面（必需）
 
