@@ -30,9 +30,9 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 - 组件必须容错：任何可能抛错的渲染路径都要兜底（slot 条目崩溃会让整块 UI 空白）。所有 fetch 都
   try/catch 并把错误展示在面板内。
 - 注册两个 slot：
-  - `conversation.input.dock`（list 型）：`id: 'approval-consult-entry'`，输入区上方的咨询提示条。
   - `shell.overlay`（list 型）：`id: 'approval-consult-panel'`，全屏浮层里的抽屉/底部弹层。
-- 待审批检测：`props.useSessionStatus((map) => map.get(sessionId))?.pendingInteraction`，
+  - `conversation.chat.turnTail`（list 型）：`id: 'approval-consult-history'`，只读历史入口。
+- 当前会话读取 `ctx.uiSession.adapter.current`，待审批读取 `ctx.uiSession.sessionStatus` 的 Map 快照，
   当 `pendingInteraction.kind === 'approval'` 时视为审批等待期。该对象即 `PendingApproval`：
   `{ sessionId, kind, key, toolName, callId?, reason?, displayReason?, result, answerable, answer(outcome), delegate() }`。
   `answer('allowed-once' | 'rejected')` 就是官方审批按钮的同一动作，可用于面板内的“允许一次/拒绝”。
@@ -142,7 +142,7 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 错误码：`no-pending`、`approval-resolved`、`executor-context-missing`、`reviewer-context-missing`、
 `review-not-initialized`（先调用 `/review`）、`empty-question`、`question-too-long`、`too-many-jobs`。
 
-### GET `/poll?jobId=&cursor=`
+### GET `/poll?jobId=&cursor=&consultKey=`
 
 ```jsonc
 { "ok": true, "jobId": "j:9", "status": "streaming|done|error|cancelled",
@@ -153,7 +153,7 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 轮询节奏建议 100–160ms；`status !== 'streaming'` 后停止。宿主把完整文本按 `cursor` 切片返回，
 客户端把 `delta` 追加到对应线程条目。`usage` 可能有 `cacheReadTokens/inputTokens/outputTokens`。
 
-### POST `/cancel` `{ jobId }` → `{ ok: true, status }`
+### POST `/cancel` `{ jobId, sessionId, consultKey }` → `{ ok: true, status }`
 
 ### POST `/relay`
 
@@ -215,6 +215,10 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 - 该插件取消后不可恢复，属于已知限制。
 
 ## 3. 客户端状态机（模块级 store + useSyncExternalStore）
+
+打开、关闭或切换面板会更新请求代数。`/context`、`/ask`、`/review`、图片上传的延迟响应只能写回发起时的面板；同面板 context 请求按最新一次请求序号处理。停止回答或接受宿主终态快照后，已经发出的 poll 响应不得再次追加正文或恢复 streaming。
+
+宿主支持 rc.2 逐条 JSON 审查消息和旧四段材料，客户端继续消费同一套 reviewer 字段。审查失败、中止、截断或风险/决定不合法时不提供有效结论；缺少工具参数/schema 时 advisory 不可用。能力开关以可选插件实际 ACTIVE 状态为准。
 
 ```js
 const store = {

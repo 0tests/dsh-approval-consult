@@ -294,3 +294,21 @@ curl.exe -s "http://127.0.0.1:3456/dsh-approval-consult/poll?jobId=<jobId>&curso
 
 > 注：路由有 `connection.requestRejection` 鉴权，命令行请求需带 GUI 的信任头/签名 cookie；
 > 验证时实际使用的是页面内 `fetch`（同源、已登录）。
+
+## 2026-11-12 · v1.2.1 / DSH 0.2.2-rc.2 自动验证
+
+本轮修改基于插件提交 `5b47676`，核对官方 DSH 标签 `dsh-v0.2.2-rc.2`、提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`。没有启动 DSH Web/Desktop，也没有调用真实模型；以下结果不可视作实机验收。
+
+### 已执行
+
+- Windows 本地分别使用 Node **20.0.0** 和 **24.9.0** 执行 `npm test` 所列全部七个脚本：单元 26、安全 15、安全生命周期 13、兼容性 19、客户端生命周期 8，共 **81 项**全部通过；另有 zh/en 212 key 对齐、CSS class 检查通过。
+- 两个 Node 版本均通过 `node --check lib/impl.js`、`lib/client.js`、`lib/index.js`。
+- Node 24.9.0 执行 `node tests/upstream-contract.mjs <rc.2 源码目录>`：直接使用官方 `snapshotAutoReview` 和 `reviewMessages` 处理构造的 native/PTC 日志，输出交给本插件解析，调用模式、名称、参数、schema 和历史计数均匹配。`review-policy.txt` 与官方常量逐字一致。
+- 通过公开宿主钩子和 HTTP 路由的内存测试覆盖：新旧审查请求关联、原始前缀保留、侧调用身份、参数/schema 完整性、错误终态、插件 ACTIVE 状态、PTC 重建、回收/超时取消。客户端执行真实函数，控制请求完成顺序，覆盖切换面板、乱序响应、停止轮询、完整快照与增量并发、动态导入中卸载。
+- CI 已配置 Ubuntu/Windows × Node 20/24；Node 24 上另检出固定官方源码提交运行 upstream 检查。远端 CI 本轮未运行。
+
+### 未覆盖与后续人工验收
+
+- rc.2 真正启动插件、官方权限插件 scope 组合、真实模型缓存/计费、图片提供方、Web/Desktop 1440×900 与 390×844 UI，仍需使用有效 DSH profile 实机验收。
+- 日志重建的 advisory 材料是保守兜底，不保证等价于官方完整审查历史；缺失 PTC binding schema 时不会猜测定义。官方审批仍由用户决定。
+- 已发布 npm 与 GitHub Release（v1.2.1）；rc.2 的真实模型调用与 Web/Desktop 人工验收仍待补。

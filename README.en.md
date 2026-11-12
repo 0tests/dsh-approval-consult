@@ -11,6 +11,8 @@ While a tool call is waiting for your approval, it lets you **ask the executing 
 auto-review AI independently** — two isolated channels, free-form Q&A plus common preset
 questions, without leaving the approval card.
 
+Current version **v1.2.1** adapts to **DSH 0.2.2-rc.2** and is published to npm and as a GitHub release. Validation covers source inspection, upstream request replay and automated regressions; rc.2 live provider and browser acceptance remain untested.
+
 ![Approval consultation panel](docs/assets/panel-desktop.png)
 
 ## Why
@@ -21,10 +23,10 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 - **Ask the executor AI** — reuses the exact captured prefix of your main conversation request, so
   provider prompt cache mostly hits; answers include full task context.
-- **Ask the reviewer AI** — reuses the auto-review request prefix (`REVIEW_POLICY` + four material
-  sections) when available; otherwise it rebuilds the same materials from the session log and runs a
-  one-shot advisory classification with the official policy text. Reviewer conversations never enter
-  the main chat.
+- **Ask the reviewer AI** — preserves the captured auto-review request prefix, supporting both legacy
+  four-section prompts and rc.2's JSON item messages. Without a capture, it can conservatively rebuild
+  advisory material when arguments and schemas are available; this is not an equivalent official snapshot.
+  Reviewer answers enter the main chat only when the user explicitly relays them.
 - **双问 (ask both)** — send one question to both sides, each answer stays in its own tab.
 - Executor Q&A is written back into the session as a labeled `approval-consult` context record
   (visible in the history panel; official Chat hides plain context rows).
@@ -51,9 +53,10 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 ## Install
 
-Requires DSH Web `0.2.1-rc.2` (tested) and Node `>=20`.
+The plugin itself requires Node `>=20`; DSH 0.2.2 requires Node `>=24.9`. Historical live checks cover
+DSH Web `0.2.1-rc.2` and `0.2.2-rc.1`; rc.2 has automated source-level compatibility coverage.
 
-Current version **v1.2.0**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.0).
+Current version **v1.2.1**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1).
 
 ```bash
 npm install dsh-approval-consult
@@ -61,7 +64,7 @@ npm install dsh-approval-consult
 
 Or install the release tarball:
 
-1. Download `dsh-approval-consult-1.2.0.tgz` from
+1. Download `dsh-approval-consult-1.2.1.tgz` from
    [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest).
 2. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin** and point it at the
    tarball's absolute path (or the download URL directly).
@@ -108,7 +111,9 @@ browser fallbacks, data & privacy). Highlights:
 
 ```bash
 npm run check   # syntax
-npm test        # host unit tests + zh/en locale parity
+npm test        # unit, security, lifecycle, compatibility, client races, locale and CSS
+# Node >=24.9, with the pinned DSH rc.2 source checkout:
+npm run test:upstream -- /path/to/deepseek-harness
 ```
 
 The plugin has no build step: `lib/` is shipped as-is (ESM host + browser client bundle).

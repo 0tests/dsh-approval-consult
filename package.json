@@ -1,6 +1,6 @@
 {
   "name": "dsh-approval-consult",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "type": "module",
   "description": "Approval consultation panel for DeepSeek Harness: while a tool call waits for approval, ask the executor AI and the auto-review AI independently, in two isolated channels with prompt-cache reuse.",
@@ -34,7 +34,8 @@
     "NOTICE.md"
   ],
   "scripts": {
-    "test": "node tests/unit.mjs && node tests/locale-parity.mjs && node tests/css-classes.mjs && node tests/security.mjs && node tests/security-lifecycle.mjs",
+    "test": "node tests/unit.mjs && node tests/locale-parity.mjs && node tests/css-classes.mjs && node tests/security.mjs && node tests/security-lifecycle.mjs && node tests/compatibility.mjs && node tests/client-lifecycle.mjs",
+    "test:upstream": "node tests/upstream-contract.mjs",
     "check": "node --check lib/impl.js && node --check lib/client.js && node --check lib/index.js"
   },
   "engines": {
@@ -49,7 +50,8 @@
       "dsh": ">=0.2.1-rc.2 <0.3.0-0",
       "dshReleases": {
         "0.2.1-rc.2": "compatible",
-        "0.2.2-rc.1": "compatible"
+        "0.2.2-rc.1": "compatible",
+        "0.2.2-rc.2": "compatible"
       }
     },
     "client": {

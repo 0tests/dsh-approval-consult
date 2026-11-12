@@ -1,7 +1,7 @@
 # 发布前检查清单（PUBLISHING）
 
 > 目标：把 `dsh-approval-consult` 作为独立、通用、可维护的开源 DSH 插件发布（npm + GitHub）。
-> 当前状态：**v1.2.0 已发布 GitHub Release（tag `v1.2.0`）并发布到 npm**（`dsh-approval-consult@1.2.0`，2026-11-05；适配 DSH 0.2.2-rc.1 + 2026-11-05 安全审计加固，安全回归 15 项）。
+> 当前状态：**v1.2.1 已发布 GitHub Release（tag `v1.2.1`）并发布到 npm**（`dsh-approval-consult@1.2.1`，2026-11-12；适配 DSH 0.2.2-rc.2，新增 27 项兼容性/生命周期/客户端竞态回归 + 官方源码契约重放）。
 
 ## 已完成（2026-11-01）
 
@@ -74,6 +74,7 @@
 | v1.1.4 | 2026-11-04 | `v1.1.4` | `dsh-approval-consult-1.1.4.tgz` | 重建记录同步审批结果并统一结束清理 |
 | v1.1.5 | 2026-11-04 | `v1.1.5` | `dsh-approval-consult-1.1.5.tgz` | 重建审批生命周期闭环 + 13 项 lifecycle 回归 |
 | v1.2.0 | 2026-11-05 | `v1.2.0` | `dsh-approval-consult-1.2.0.tgz` | 适配 DSH 0.2.2-rc.1 + 独立审计 P2/P3 加固（安全回归 15 项） |
+| v1.2.1 | 2026-11-12 | `v1.2.1` | `dsh-approval-consult-1.2.1.tgz` | 适配 DSH 0.2.2-rc.2：新审查消息格式、PTC 参数、面板代际校验、81 项回归 |
 | v1.1.5 | 2026-11-04 | `v1.1.5` | `dsh-approval-consult-1.1.5.tgz` | 重建审批生命周期闭环：附件读/传、模型提交、poll 与每秒后台同步 + 13 项回归 |
 
 ## 发布步骤（建议）

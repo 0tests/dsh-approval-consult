@@ -7,8 +7,8 @@
 
 ## 环境
 
-- Node.js ≥ 20（仓库 CI 用 Node 20 / Ubuntu + Windows）
-- DSH `0.2.1-rc.x`（Web 形态；`dsh web` 启动后默认 `http://127.0.0.1:3456`）
+- 插件测试 Node.js ≥ 20；DSH 0.2.2 宿主和官方源码重放需要 Node ≥24.9。CI 跑 Node 20/24 × Ubuntu/Windows。
+- 适配目标 DSH `0.2.2-rc.2`，保留 `0.2.1-rc.2` / `0.2.2-rc.1` 旧格式支持（Web 形态，`dsh web` 启动）。
 - 可选：`@deepseek-ai/dsh-experimental-auto-review`（审查 AI 通道）、`dsh-approval-timeout`（倒计时联动）。
   两者都**不是必需**：缺任何一个插件时对应 UI 会整体隐藏，这是必须保持的兼容性约定。
 
@@ -47,8 +47,9 @@
 ## 测试
 
 ```bash
-npm test        # tests/unit.mjs（宿主纯函数）+ tests/locale-parity.mjs（zh/en 键对齐）
+npm test        # 单元、安全、生命周期、兼容性、客户端竞态、locale/CSS
 npm run check   # node --check lib/{index,impl,client}.js
+npm run test:upstream -- /path/to/deepseek-harness # rc.2 固定源码，Node >=24.9
 ```
 
 提交前请让两者全绿。改到 UI 行为时，建议在 1440×900 与 390×844 两个视口各点一遍

@@ -18,7 +18,7 @@ function host() {
   const session = {
     id: 'A', header: {}, surface: { nodes: [] },
     snapshotEvents: () => { snapshots++; return events },
-    requestHeader: () => ({ config: { provider: 'mock', model: 'mock' }, tools: [] }),
+    requestHeader: () => ({ config: { provider: 'mock', model: 'mock' }, tools: [{ name: 'shell', description: 'Run a command', parameters: { type: 'object' } }] }),
   }
   const agent = { status: 'running', session, ctx: { on: () => () => {} }, inject: (m) => injections.push(m) }
   const llm = { resolveModelInfo: async () => ({ inputModalities: ['image'] }) }

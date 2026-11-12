@@ -1,12 +1,12 @@
 # 兼容性说明（COMPATIBILITY）
 
-> 最后更新：2026-11-05。目标：在没有本插件作者的机器上也能装、能跑、不把宿主弄坏。
+> 最后更新：2026-11-12。rc.2 的验证为官方源码核对与自动测试，实机验收范围另见 `VERIFICATION.md`。
 
 ## 1. 运行环境矩阵
 
 | 项 | 已验证 | 说明 / 兜底 |
 | --- | --- | --- |
-| DSH 实现 | `0.2.1-rc.2`、`0.2.2-rc.1`（Web profile） | 依赖的扩展面见下表；rc 版本之间字段可能变，升级后跑一遍自检 |
+| DSH 实现 | `0.2.1-rc.2`、`0.2.2-rc.1` 历史实机；`0.2.2-rc.2` 自动验证 | rc.2 官方提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`；真实模型与 UI 未复测 |
 | Node | `>=20.0.0`（`package.json` engines） | 宿主实现只用 Node 内置模块（`node:fs`/`node:path`/`node:url`/`node:crypto`）；注意 DSH 0.2.2 宿主本身要求 Node >=24.9 |
 | OS | Windows 11（真实），路径处理用 `node:path` | 无平台专属调用；macOS/Linux 预期可用（未实机验证，CI 跑 Ubuntu/Windows） |
 | 浏览器 | Microsoft Edge / Chrome（Chromium 120+） | 依赖 `HTMLElement.showPopover` 时自动降级为 fixed 层；`color-mix()` 失败时回退到 CSS 变量兜底色 |
@@ -24,6 +24,16 @@
 - 原生工具执行已挂载：`@deepseek-ai/dsh-tool-executor-native`（在 profile 的 composition /
   `cordis.patch.yml` 里与 `dsh-tools` 同 scope 插入）；
 - 本插件依赖的扩展面（见第 2 节）在 0.2.2-rc.1 中签名不变（已核对 `.d.ts` 与实机冒烟）。
+
+## 1.2 DSH 0.2.2-rc.2
+
+- 自动审查的 `messages` 从单条四段材料改为环境消息加逐条 JSON。最后一条为 pending tool-call，之前最近的同 mode/name tool-schema 提供定义；插件同时支持新旧格式，追问不修改捕获前缀。
+- 同步 rc.2 `REVIEW_POLICY`；从日志生成的 advisory 材料仍是保守重建，不代替官方授权。参数、schema 或路由缺失时不可用；不会把截断 JSON 当作完整证据。
+- 子代理创建文本按 direct-parent-instruction/fact 分类，普通用户/SDK 文本按 user-instruction 分类，图片保持 fact，项目约束保持 constraint。
+- 侧调用保留会话身份并使用 `purpose: approval-consult`；主请求捕获排除 auxiliary purpose，复制后的侧调用也不会再次捕获。
+- Cordis `FiberState.ACTIVE`（2）才表示可选插件正在运行；PENDING/FAILED 等状态不开放对应入口。
+- `approval/request`、`tools/pre-execute`、`llm/stream`、`agent.inject()`、`PendingApproval.answer()`、`uiSession.adapter.current`、`sessionStatus` 与所用 slots 已核对源码。插件未包装 `Session.append()`，无需迁移 rc.2 的批量追加重载；未使用新版变更的锚点浮层定位 API。
+- CI 覆盖 Ubuntu/Windows × Node 20/24；Node 24 另外从固定提交加载官方纯函数，重放 native/PTC 审查请求并核对策略副本。
 
 ## 2. DSH 扩展面（必需）
 
@@ -76,8 +86,10 @@
 ## 6. 升级 DSH 后的自检
 
 ```bash
-npm test          # 宿主纯函数 + locale 一致性
+npm test          # 单元、安全、生命周期、兼容性、客户端竞态、locale/CSS
 npm run check     # 语法检查
+# Node >=24.9，传入 rc.2 官方源码目录：
+npm run test:upstream -- /path/to/deepseek-harness
 ```
 
 然后人工冒烟（5 分钟）：触发一次审批 → 胶囊/面板出现 → 执行 AI 预设问题流式回答 → 审查 tab →

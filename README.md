@@ -10,6 +10,8 @@
 
 这是一个本地 DSH Web 插件（宿主 Cordis 插件 + 浏览器端 `dsh.client` 模块），无构建步骤、无第三方运行时依赖。
 
+当前版本 **v1.2.1** 已适配 **DSH 0.2.2-rc.2**，并已发布到 npm 与 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1)。验证范围见 [兼容性说明](docs/COMPATIBILITY.md) 和 [验收记录](docs/VERIFICATION.md)。
+
 ---
 
 ## 为什么需要它
@@ -37,7 +39,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.2.0**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.0)。
+> 当前版本 **v1.2.1**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1)。
 > `npm install dsh-approval-consult`，或让 Agent 用 `plugin_manager` 安装这个包名；下面也保留了 tarball / 本地目录两种方式。
 
 ### 方式 A：npm
@@ -49,10 +51,10 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 ### 方式 B：从 Release 安装（tarball）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
-   `dsh-approval-consult-1.2.0.tgz`；
+   `dsh-approval-consult-1.2.1.tgz`；
 2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
    或直接填下载链接
-   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.2.0/dsh-approval-consult-1.2.0.tgz`；
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.2.1/dsh-approval-consult-1.2.1.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
 ### 方式 C：本地目录（源码 / 开发）
@@ -91,8 +93,8 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ### 审查 AI 的两种模式
 
-- **官方审查已捕获**：直接显示当时那次审查的 `risk/decision/reason`、审查依据条数，并可追问。上下文 = 官方那次审查请求的**原始前缀**（`REVIEW_POLICY` + 四段材料 + 它的结论），不塞主对话。
-- **没有捕获到官方审查**（例如 sandbox 提权这类非 auto-review 的审批）：面板显示「审查材料已就绪」和「让审查 AI 重新评估」按钮。点击后按官方 `REVIEW_POLICY` 与同样的四段材料规则（从会话日志重建 `ENVIRONMENT / PROJECT_INSTRUCTIONS / FILTERED_HISTORY / PENDING_ACTION`）跑一次分类，给出 advisory 的风险结论，然后可继续追问。**这只是帮你判断的参考意见，不是官方审批结论。**
+- **官方审查已捕获**：直接显示当时那次审查的 `risk/decision/reason`、审查依据条数，并可追问。上下文保留官方请求的**原始前缀**：旧版四段材料、rc.2 逐条 JSON 消息均支持，不塞主对话。
+- **没有捕获到官方审查**（例如 sandbox 提权）：仅在参数和工具定义足够完整时提供「让审查 AI 重新评估」。材料从会话日志保守重建，按当前策略使用旧版四段格式或新版逐条消息格式；它与官方完整快照不保证等价。**结果只是参考意见，不是官方审批结论，也不会替用户批准工具执行。**
 
 ### 没有装自动审查插件时
 
@@ -171,7 +173,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ### 5. 审查上下文兜底
 
-如果没能捕获到官方审查请求（非 auto-review 审批、或审查请求不在监听路径上），宿主按官方 `snapshotAutoReview` 的规则从会话日志重建四段材料，并用从官方包原样抽取的 `REVIEW_POLICY`（`lib/review-policy.txt`）做一次 advisory 分类。详见上文「审查 AI 的两种模式」。
+如果没能捕获到官方审查请求，宿主从会话日志重建 advisory 材料，并使用 `REVIEW_POLICY`（离线副本为 rc.2；运行时可同步真实策略）。参数或 schema 缺失、材料超限时关闭重新评估，避免截断证据。详见上文「审查 AI 的两种模式」。
 
 ### 6. 能力自适应（缺插件不报错、不显示不该显示的内容）
 
@@ -230,12 +232,12 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
   `window.__ModuleLoader__` 客户端协议、同一批槽位），页面经 `dsh-app://app` 自定义协议反向代理到本地 host server。
   因此插件不需要改代码，**只需要装进桌面端使用的 `desktop` profile**（桌面端只启动该 profile）。
   安装方式与验证清单见 [`docs/DESKTOP.md`](docs/DESKTOP.md)。CLI / TUI 形态没有 UI，宿主插件本身无副作用。
-- **DSH 版本**：已验证 `0.2.1-rc.2` 与 `0.2.2-rc.1`（Web profile）。0.2.2 把原生 / PTC 工具执行拆成独立插件，宿主 profile 需要挂载 `@deepseek-ai/dsh-tool-executor-native` 后原生工具才会注册（这是宿主配置，不是本插件的依赖）；本插件用到的 `tools/pre-execute`、`approval/request`、`llm/stream`、`agent.inject()` 与客户端槽位在 0.2.2-rc.1 均保持不变。
+- **DSH 版本**：历史实机验证为 `0.2.1-rc.2` 与 `0.2.2-rc.1`（Web profile）；`0.2.2-rc.2` 已完成官方源码核对、审查请求离线重放和自动回归，尚未进行该版本的实机模型/UI 验收。0.2.2 宿主要求 Node >=24.9，原生工具需挂载 `@deepseek-ai/dsh-tool-executor-native`。rc.2 的审批事件、`agent.inject()` 和所用客户端槽位仍可用，自动审查材料格式需使用本次适配。
 - **与 `dsh-approval-timeout` 的可选集成**：宿主通过插件注册表检测该插件是否在运行；未安装时 `/context.features.timeoutAvailable=false`，客户端**一次探测请求都不发**、不渲染任何倒计时相关内容（不会出现 "未安装" 提示，也不会产生 404 噪音）。已安装时只读探测 `/status`，按 `timeoutAutoPause` 策略决定是否调用 `/cancel`。注意该插件的 `/cancel` 是**全局**的（会取消所有待审批项的倒计时）：自动路径在探测到还有其它未取消的待审批项时会拒绝自动暂停并提示；只有用户手动点面板里的「暂停倒计时」才做全局取消（按钮 tooltip 已说明）。
 - **与官方 `@deepseek-ai/dsh-experimental-auto-review` 的可选依赖**：未安装时只保留执行 AI 通道（见上文）；已安装时两条通道都可用，且审查侧优先复用官方审查请求。
 - **常用问题持久化**：用户编辑后写入 `<dataDir>/presets.json`（默认 `~/.dsh-approval-consult`；UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。npm 安装升级不会覆盖用户配置，不写 profile patch。
 - **与 `dsh-notify` / `mobile-fix` 等插件无冲突**：不依赖、不修改官方审批卡片 DOM；不占用其他插件的 slot id。
-- **依赖官方的稳定面**：`REVIEW_POLICY` 前缀、`approval/request` waterfall、`llm/stream` waterfall、`agent.inject()`、`session.surface`。升级 DSH 后若官方改了审查策略文本，重新运行 `node tests/extract-review-policy.mjs` 即可同步（该脚本从已安装的 auto-review 包原样抽取）。
+- **依赖的官方扩展面**：`REVIEW_POLICY` 前缀、`approval/request` waterfall、`llm/stream` waterfall、`agent.inject()`、`session.surface`。同步策略可运行 `node tests/extract-review-policy.mjs <auto-review/src/index.ts 或 lib/index.js>`；还需核对消息格式并运行 `npm run test:upstream -- <DSH 源码目录>`（Node >=24.9）。
 - **已知限制**：
   - 线程在宿主内存，DSH 重启后随审批一起消失（审批本身也不跨重启）；插件热重载会保留状态，若记录仍丢失则 `/context` 会从会话日志重建（`approval/asked` 未 decided 即仍在等待），重建的记录带 `consultKey: "re:*"`；
   - 重建只能恢复审批与审查材料，**旧的主对话请求无法回溯**，因此旧会话恢复后「执行 AI」可能显示上下文不可用（审查 AI 可用）；
@@ -306,7 +308,7 @@ dsh-approval-consult/
 
 ```bash
 npm run check   # 语法检查（index/impl/client）
-npm test        # 宿主纯函数单测（25 项）+ zh/en locale 一致性
+npm test        # 单元、安全、生命周期、兼容性、客户端竞态 + locale/CSS 检查
 ```
 
 界面迭代：URL 加 `?consult-demo=1`（或 `localStorage['dsh-approval-consult.demo']='1'`）进入演示模式：

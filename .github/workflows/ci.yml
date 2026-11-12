@@ -10,13 +10,26 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        node: ['20', '24']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
       - name: Syntax check
         run: npm run check
-      - name: Unit + locale tests
+      - name: Unit, lifecycle and compatibility tests
         run: npm test
+      - name: Read pinned DSH rc.2 source
+        if: matrix.node == '24'
+        uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c
+          path: .upstream-dsh
+          sparse-checkout: packages/experimental/auto-review/src
+          persist-credentials: false
+      - name: Replay upstream review request construction
+        if: matrix.node == '24'
+        run: npm run test:upstream -- .upstream-dsh
