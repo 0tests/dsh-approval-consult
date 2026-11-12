@@ -18,7 +18,9 @@ const upstream = vm.runInNewContext(`${js}\n;({ snapshotAutoReview, reviewMessag
 const marker = 'const REVIEW_POLICY = `'
 const policyStart = text.indexOf(marker) + marker.length
 const policy = text.slice(policyStart, text.indexOf('`', policyStart))
-assert.equal(readFileSync(new URL('../lib/review-policy.txt', import.meta.url), 'utf8'), policy)
+// 仓库在 Windows 上可能以 CRLF 检出 review-policy.txt；与官方 LF 文本比较前统一换行符。
+const normalizeEol = (value) => value.replace(/\r\n?/g, '\n')
+assert.equal(normalizeEol(readFileSync(new URL('../lib/review-policy.txt', import.meta.url), 'utf8')), normalizeEol(policy))
 
 for (const mode of ['native', 'ptc-inner']) {
   const args = { command: 'echo test' }
