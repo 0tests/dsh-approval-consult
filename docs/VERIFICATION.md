@@ -1,7 +1,33 @@
 # 验收记录（真实环境，持续更新）
 
+## 2026-11-14：v1.3.1 候选与 Go 原生审批卡按钮
+
+- Go App 基线：`970f081b0d9c89cdb350fd84086d995c6104ab80`，独立本地分支 `codex/approval-consult-native`，未提交、推送或发布。
+- Windows x64 安装 Flutter **3.47.7**／Dart **3.13.5**，锁文件依赖不变。`flutter analyze --no-pub`、中英文 ARB 检查（7734 keys）、用户指南同步检查通过。
+- 新增 **16 个真实 Flutter widget 用例**，使用插件 `tests/export-go-panel.mjs` 生成的完整面板 fixture：独立／工具内审批卡、同帧连点、准确的会话和内层调用、未加载／禁用／不就绪／旧版插件、320×640 与 844×390、1.5 倍字体及模拟键盘、首次返回收键盘再返回关面板、同主机断线保留草稿、结束变只读、切换主机不向新主机读取旧调用。
+- 相关原生插件、审批生命周期与依赖方向回归共 **238 项通过**（含新增 16 项）。范围为 `test/plugins/native/` 排除 `native_slots_golden_test.dart`、`native_files_golden_test.dart`、`chat_plugins_sheet_test.dart`，以及 `approval_reason_locale_test.dart`、`approval_completion_owner_test.dart`、`chat_host_approval_test.dart`、`arch/import_direction_test.dart`。未运行整个 App 的全部测试或 Android 集成测试。
+- 中文布局使用 Go CI 固定版本的 Noto CJK 字体。SQLite 原生测试库经官方 Release API 下载，SHA-256 与锁定 `sqlite3 3.9.1` 包内值一致；测试时临时指定同一二进制，测试后还原配置。使用 Flutter 测试引擎生成并查看了审批卡和原生面板截图。
+- 插件在 Node **20.0.0** 和 **24.9.0** 下通过语法检查及 **126 项测试**，另有 215 个中英文 key 和 20 个 CSS class 校验。原生新增 5 项作用域／PTC／重建／重连测试，动态更新不改写输入默认值，评估结果可见，结束后不会改选后来记录。
+- Go **v1.0.15** SDK 与上述 **main** 源码均通过 **4 项官方契约测试**；`plugin-kit check --load`、DSH rc.2 上游契约和真实 Chromium 手机 Web 回归通过。
+
+未构建或安装 APK，没有 Android 真机、ADB 或有效模型 profile。输入法候选词、真正的系统返回、杀进程恢复和实际模型调用仍未验证。需要同时安装插件并构建带补丁的 Go App；只升级插件不会增加 Flutter 原生按钮。
+
+## 2026-11-13：v1.3.0 候选，DSH Go 与手机端
+
+本节为上一轮验证；较早的实机记录不代表本次 Android 实机验收。
+
+- Node **20.0.0** 与 **24.9.0** 均通过语法检查和 `npm test`：121 项断言／测试（26 单元、15 安全、13 安全生命周期、21 兼容性、8 客户端生命周期、19 Go 原生、19 手机行为），另有 215 个中英文 key 和 20 个条件 CSS class 校验。
+- DSH rc.2 固定提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`：官方 native/PTC 审查构造重放、策略副本检查通过。
+- Go **v1.0.15** 固定提交 `a9877420ab9aee121134faf01b6a92a39ce0b05b`：3 项官方源码契约测试通过，覆盖原生清单／能力降级／中英文视图／动作效果／数据预算、真实 Web 返回脚本和极端 Unicode 内容。
+- 官方 `plugin-kit check --load`：清单与注册正常，4 个入口／语言视图无错误组件或占位。SDK 仅给出默认强调色在暗色背景下的自动对比度校正提示。
+- Windows 上的真实 Edge（Chromium，headless）+ React 19.2，DSH 服务为测试夹具：393×852 竖屏模拟 330px 键盘、852×393 横屏模拟 200px 键盘，输入与发送均位于可用区域。已查看截图；真实 Go Back 脚本可关闭面板，Enter 换行，503 后恢复已有回答且保留草稿，没有重复 ask。
+- 加入 CI 的固定 Go 源码检查与 Linux Chromium 浏览器任务。远端 CI 尚未运行。
+- 新增覆盖：原生会话归属、并发设备选择隔离、快速启动任务、停止／结束边界、订阅清理、未确认发送的幂等重试、后台／离线暂停、前台完整快照恢复、旧轮询成功／失败隔离、GET 超时、安全区与双重键盘高度、缩放与 IME。
+
+没有 Android 设备／ADB／Flutter 或有效的真实模型 profile。本轮未测原生 sheet 的实际软键盘、Android 系统返回、Android 杀进程后的表现、真实模型流与缓存、SSH 原生桥接和中转模式。手机安装步骤及真机验收动作见 [DSH Go](DSH-GO.md)。模型任务与咨询全文保存在宿主内存，断网恢复不等于进程重启后恢复。未向手机安装，未推送或发布 npm／GitHub Release。
+
 > 目的：区分「代码看起来对」与「在真实 DSH 进程里跑通」。本文件只记录实际执行过的验证、
-> 证据与未覆盖项；不编造评分。最终验收以本文件末尾的最新一轮为准。
+> 证据与未覆盖项；不编造评分。以日期最新的一轮为准。
 
 ## 环境
 
@@ -295,7 +321,7 @@ curl.exe -s "http://127.0.0.1:3456/dsh-approval-consult/poll?jobId=<jobId>&curso
 > 注：路由有 `connection.requestRejection` 鉴权，命令行请求需带 GUI 的信任头/签名 cookie；
 > 验证时实际使用的是页面内 `fetch`（同源、已登录）。
 
-## 2026-11-12 · v1.2.1 / DSH 0.2.2-rc.2 自动验证
+## 2026-11-12 · v1.2.1 候选 / DSH 0.2.2-rc.2 自动验证
 
 本轮修改基于插件提交 `5b47676`，核对官方 DSH 标签 `dsh-v0.2.2-rc.2`、提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`。没有启动 DSH Web/Desktop，也没有调用真实模型；以下结果不可视作实机验收。
 
@@ -311,4 +337,4 @@ curl.exe -s "http://127.0.0.1:3456/dsh-approval-consult/poll?jobId=<jobId>&curso
 
 - rc.2 真正启动插件、官方权限插件 scope 组合、真实模型缓存/计费、图片提供方、Web/Desktop 1440×900 与 390×844 UI，仍需使用有效 DSH profile 实机验收。
 - 日志重建的 advisory 材料是保守兜底，不保证等价于官方完整审查历史；缺失 PTC binding schema 时不会猜测定义。官方审批仍由用户决定。
-- 已发布 npm 与 GitHub Release（v1.2.1）；rc.2 的真实模型调用与 Web/Desktop 人工验收仍待补。
+- 未发布 npm、GitHub Release，也未推送仓库分支；源码和本地安装包为待发布候选。

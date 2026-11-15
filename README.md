@@ -8,9 +8,9 @@
 >
 > 在 DSH（DeepSeek Harness）里，当某个工具调用正在等待你审批时，让你可以**分别**问「执行任务的 AI」和「自动审查 AI」，把风险问清楚再决定；有用的问答会自动留在会话里，不会“选完就忘”。
 
-这是一个本地 DSH Web 插件（宿主 Cordis 插件 + 浏览器端 `dsh.client` 模块），无构建步骤、无第三方运行时依赖。
+这是一个本地 DSH 插件（宿主 Cordis 插件 + Web 面板 + 可选 DSH Go 原生面板），无构建步骤、无第三方运行时依赖。
 
-当前版本 **v1.2.1** 已适配 **DSH 0.2.2-rc.2**，并已发布到 npm 与 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1)。验证范围见 [兼容性说明](docs/COMPATIBILITY.md) 和 [验收记录](docs/VERIFICATION.md)。
+当前版本 **v1.3.1** 已适配 **DSH 0.2.2-rc.2**，支持 **DSH Go v1.0.15 本机原生面板**及 Web 手机键盘、返回和断线恢复优化。配套 Go App 补丁在原生审批卡增加「咨询」，自动定位当前审批；该按钮需要重新构建并安装修改后的 App，只升级插件时仍使用会话入口。已发布到 npm 与 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1)；原生入口与安装方式见 [DSH Go 说明](docs/DSH-GO.md)，验证范围见 [验收记录](docs/VERIFICATION.md)。
 
 ---
 
@@ -39,7 +39,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 
 ## 安装
 
-> 当前版本 **v1.2.1**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1)。
+> 当前版本 **v1.3.1**，已发布到 npm（[`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)）和 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1)。
 > `npm install dsh-approval-consult`，或让 Agent 用 `plugin_manager` 安装这个包名；下面也保留了 tarball / 本地目录两种方式。
 
 ### 方式 A：npm
@@ -51,10 +51,10 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 ### 方式 B：从 Release 安装（tarball）
 
 1. 在 [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest) 下载
-   `dsh-approval-consult-1.2.1.tgz`；
+   `dsh-approval-consult-1.3.1.tgz`；
 2. 打开 DSH Web → 左侧「插件」→「添加插件」→「安装第三方插件」，填这个 tarball 的绝对路径，
    或直接填下载链接
-   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.2.1/dsh-approval-consult-1.2.1.tgz`；
+   `https://github.com/0tests/dsh-approval-consult/releases/download/v1.3.1/dsh-approval-consult-1.3.1.tgz`；
 3. 安装完成后点「立即启用」，重启一次 `dsh web` 更稳。
 
 ### 方式 C：本地目录（源码 / 开发）

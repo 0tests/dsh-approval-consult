@@ -15,3 +15,7 @@ Thumbs.db
 
 # 本地截图（发布用的截图放在 docs/assets/ 下）
 approval-consult-shots/
+.test-browser/
+.browser-results/
+.upstream-go/
+.upstream-dsh/

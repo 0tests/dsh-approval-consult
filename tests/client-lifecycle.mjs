@@ -1,36 +1,8 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import vm from 'node:vm'
+import { client } from './helpers/client.mjs'
 import { apply as applyShim } from '../lib/index.js'
 
-const source = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8').replaceAll('\r\n', '\n')
-function client(names, overrides = {}) {
-  const emitted = [], scheduled = [], requests = []
-  const state = {
-    store: { open: true, demo: null, sessionId: 'A', consultKey: 'ac:A', callId: '1', draft: 'why?', limits: {},
-      threads: { executor: [], reviewer: [] }, context: null, attachments: [], tab: 'executor' },
-    runtime: { disposed: false }, pollGeneration: 0, contextRequest: 0, activePolls: new Map(),
-    API: '/dsh-approval-consult', POLL_INTERVAL_MS: 120,
-    emit(patch) { emitted.push(patch); Object.assign(state.store, patch) },
-    after(ms, fn) { scheduled.push(fn) },
-    requestJson(url, options) { return new Promise((resolve, reject) => requests.push({ url, options, resolve, reject })) },
-    contextQuery: () => '/context', applyContext: (payload) => { state.store.context = payload },
-    describeError: (error) => ({ code: error.code, detail: error.message }),
-    readyAttachmentMeta: () => [], nextLocalId: () => 'local:1', ensureTimeoutPaused() {},
-    toast() {}, clearAttachments() { state.store.attachments = [] },
-    demoStopTimers: new Map(),
-    ...overrides,
-  }
-  const ctx = vm.createContext(state)
-  for (const name of new Set(['isCurrentPanel', ...names])) {
-    const start = source.search(new RegExp(`^    (?:async )?function ${name}\\(`, 'm'))
-    assert.ok(start >= 0, `missing ${name}`)
-    const end = source.indexOf('\n    }', start) + 6
-    vm.runInContext(source.slice(start, end), ctx)
-  }
-  return { ctx, state, emitted, scheduled, requests }
-}
 
 test('a previous panel context response cannot overwrite the current session', async () => {
   const h = client(['loadContext']), pending = h.ctx.loadContext()

@@ -50,6 +50,7 @@
 npm test        # 单元、安全、生命周期、兼容性、客户端竞态、locale/CSS
 npm run check   # node --check lib/{index,impl,client}.js
 npm run test:upstream -- /path/to/deepseek-harness # rc.2 固定源码，Node >=24.9
+npm run test:go -- /path/to/dsh-Go # Go v1.0.15 固定源码，SDK + Back 脚本
 ```
 
 提交前请让两者全绿。改到 UI 行为时，建议在 1440×900 与 390×844 两个视口各点一遍
@@ -61,6 +62,7 @@ npm run test:upstream -- /path/to/deepseek-harness # rc.2 固定源码，Node >=
 lib/index.js     # 稳定入口 shim（dynamic import + 可选 devWatch）
 lib/impl.js      # 宿主：捕获主/审查请求、侧调用、HTTP 路由、注入、能力检测、预设存储
 lib/client.js    # 浏览器端：胶囊 + 抽屉/底部弹层 + 常用问题编辑器（无构建，React.createElement）
+lib/dsh-go.js    # 可选 Go 原生面板、输入／动作、分页与数据订阅
 lib/review-policy.txt  # 官方 REVIEW_POLICY 兜底副本（运行时优先用捕获到的真实策略）
 tests/           # 纯函数单测、locale 对齐、策略抽取
 docs/            # 契约、兼容性、验收记录、发布清单
@@ -68,6 +70,8 @@ docs/            # 契约、兼容性、验收记录、发布清单
 
 **改接口前先读 [`docs/CLIENT-CONTRACT.md`](docs/CLIENT-CONTRACT.md)**：它是客户端/宿主之间的唯一事实来源，
 包括 `/context`、`/ask`、`/poll` 的字段语义与降级约定。
+
+Go 本机面板、手机键盘／返回／重连和可选真实浏览器测试说明见 [`docs/DSH-GO.md`](docs/DSH-GO.md)。原生动作不能等待模型完成；数据推送不能覆盖当前视图的输入草稿。修改移动行为时运行 `test:browser`，并区分模拟键盘区域与 Android 真机验收。
 
 ## 提交约定
 

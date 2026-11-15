@@ -33,3 +33,44 @@ jobs:
       - name: Replay upstream review request construction
         if: matrix.node == '24'
         run: npm run test:upstream -- .upstream-dsh
+      - name: Read pinned DSH Go v1.0.15 contracts
+        if: matrix.node == '24'
+        uses: actions/checkout@v4
+        with:
+          repository: ccch1mneyyy/dsh-Go
+          ref: a9877420ab9aee121134faf01b6a92a39ce0b05b
+          path: .upstream-go
+          sparse-checkout: |
+            sdk/plugin-kit
+            app/assets/web
+          persist-credentials: false
+      - name: Validate native panels and replay Go Back
+        if: matrix.node == '24'
+        run: npm run test:go -- .upstream-go
+
+  mobile-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/checkout@v4
+        with:
+          repository: ccch1mneyyy/dsh-Go
+          ref: a9877420ab9aee121134faf01b6a92a39ce0b05b
+          path: .upstream-go
+          sparse-checkout: app/assets/web
+          persist-credentials: false
+      - name: Install isolated browser test dependencies
+        run: npm install --prefix .test-browser --ignore-scripts --no-audit --no-fund react@19.2.0 react-dom@19.2.0 playwright@1.56.1
+      - name: Install test Chromium
+        run: node .test-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Exercise mobile layout and reconnect
+        run: npm run test:browser -- .test-browser .upstream-go .browser-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-browser-screenshots
+          path: .browser-results/
+          retention-days: 7

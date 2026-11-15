@@ -1,20 +1,38 @@
 // Public hooks and HTTP routes with an in-memory host; no provider calls or disk writes.
 import assert from 'node:assert/strict'
-import { EventEmitter } from 'node:events'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { apply, __test } from '../lib/impl.js'
+import { __test } from '../lib/impl.js'
+import { host } from './helpers/host.mjs'
 
-const STATE = '__DSH_APPROVAL_CONSULT_STATE_V1__'
 const policy = readFileSync(new URL('../lib/review-policy.txt', import.meta.url), 'utf8')
 const schema = { name: 'shell', description: 'Run a command', parameters: { type: 'object' } }
 const user = (text) => ({ role: 'user', content: [{ type: 'text', text }] })
 const turn = () => new Promise((resolve) => setImmediate(resolve))
-const deferred = () => {
-  let resolve
-  const promise = new Promise((r) => { resolve = r })
-  return { promise, resolve }
-}
+
+test('a repeated ask identifier returns the original task after a lost acknowledgement', async (t) => {
+  const h = host(t); h.main(); const r = h.pending()
+  const body = { sessionId: 'A', consultKey: r.key, target: 'executor', question: 'why?', requestId: 'browser:lost-ack' }
+  const [first, replay] = await Promise.all([h.request('/ask', body), h.request('/ask', body)])
+  assert.equal(first.status, 200); assert.deepEqual(replay.body, first.body)
+  await turn()
+  assert.equal(r.threads.executor.length, 1)
+  assert.equal(h.state.stats.asks, 1)
+  const snapshot = await h.request('/context?sessionId=A&consultKey=' + encodeURIComponent(r.key))
+  assert.equal(snapshot.body.threads.executor[0].requestId, body.requestId)
+})
+
+test('ask deduplication remains scoped to the approval and rejects changed intent', async (t) => {
+  const h = host(t); h.main(); const r = h.pending()
+  const body = { sessionId: 'A', consultKey: r.key, question: 'why?', requestId: 'browser:one' }
+  await h.request('/ask', body)
+  for (const change of [{ question: 'different' }, { target: 'reviewer' }]) {
+    const result = await h.request('/ask', { ...body, ...change })
+    assert.equal(result.status, 409); assert.equal(result.body.code, 'request-conflict')
+  }
+  assert.notEqual((await h.request('/ask', { ...body, sessionId: 'B' })).status, 200)
+  assert.equal(r.threads.executor.length, 1)
+})
 
 export function reviewOptions(mode = 'native', args = { command: 'echo test' }) {
   return {
@@ -27,79 +45,6 @@ export function reviewOptions(mode = 'native', args = { command: 'echo test' }) 
   }
 }
 
-function host(t, config = {}) {
-  delete globalThis[STATE]
-  const routes = new Map(), hooks = new Map(), intervals = new Map(), events = [], injections = []
-  const session = {
-    id: 'A', header: { cwd: '/project' }, surface: { nodes: [] }, isOwnSeq: () => true,
-    snapshotEvents: () => events,
-    requestHeader: () => ({ config: { provider: 'mock', model: 'mock' }, tools: [schema] }),
-  }
-  const agent = { session, status: 'running', ctx: { on: () => () => {} }, inject: (m) => injections.push(m) }
-  const ctx = {
-    registry: new Map(), agents: { list: () => [agent], get: () => agent }, sessions: {},
-    webServer: { register: ({ path, handler }) => { routes.set(path, handler); return () => routes.delete(path) } },
-    connection: { requestRejection: () => undefined },
-    on: (name, fn, prepend) => { hooks.set(name, { fn, prepend }); return () => hooks.delete(name) },
-    inject: (_services, fn) => { fn(ctx); return { dispose() {} } },
-    llm: { stream: async function* () { yield { type: 'text-delta', text: 'test answer' } } },
-  }
-  const originalInterval = globalThis.setInterval, originalClear = globalThis.clearInterval
-  globalThis.setInterval = (fn, ms) => { const timer = { unref() {} }; intervals.set(timer, { fn, ms }); return timer }
-  let dispose
-  try { dispose = apply(ctx, { reviewerMode: 'on', ...config }, { log: { info() {}, warn() {}, error() {} } }) }
-  finally { globalThis.setInterval = originalInterval }
-  t.after(() => {
-    globalThis.clearInterval = (timer) => intervals.delete(timer)
-    try { dispose() } finally { globalThis.clearInterval = originalClear; delete globalThis[STATE] }
-    assert.equal(intervals.size, 0)
-  })
-  const append = (type, data, visible = false) => {
-    const event = { seq: events.length, time: Date.now(), type, data }
-    events.push(event)
-    if (visible) session.surface.nodes.push(event.seq)
-    return event
-  }
-  append('user/message', { source: { kind: 'user' }, content: [{ type: 'text', text: 'test task' }] }, true)
-  const request = (path, body) => new Promise((resolve, reject) => {
-    const req = Object.assign(new EventEmitter(), { url: `/dsh-approval-consult${path}`, method: body === undefined ? 'GET' : 'POST', headers: {}, destroy() {} })
-    const timer = setTimeout(() => reject(new Error(`route timeout: ${path}`)), 1000)
-    let status
-    routes.get(req.url.split('?')[0])(req, {
-      writeHead(code) { status = code },
-      end(data) { clearTimeout(timer); resolve({ status, body: JSON.parse(data) }) },
-      destroy() { clearTimeout(timer); reject(new Error('response destroyed')) },
-    })
-    if (body !== undefined) { req.emit('data', Buffer.from(JSON.stringify(body))); req.emit('end') }
-  })
-  return {
-    ctx, agent, hooks, session, events, append, injections, request,
-    get state() { return globalThis[STATE] },
-    async capture(options, chunks) {
-      const stream = hooks.get('llm/stream').fn(options, async function* () { yield* chunks })
-      for await (const _ of stream) { /* Consume the transparent host stream. */ }
-    },
-    main() {
-      const options = { sessionId: 'A', provider: 'mock', model: 'mock', tools: [schema], messages: [{ role: 'system', content: [{ type: 'text', text: 'system' }] }] }
-      hooks.get('llm/stream').fn(options, () => null)
-      return options
-    },
-    pending(id = 'call-1', args = { command: 'echo test' }, ptc = false) {
-      const exec = { agent, name: schema.name, callId: id, rootCallId: ptc ? 'root' : id, arguments: args,
-        ...(ptc ? { parent: { callId: 'root' }, schema } : {}) }
-      append(ptc ? 'tool/ptc-dispatch-start' : 'tool/call', ptc
-        ? { subCallId: id, rootCallId: 'root', parentCallId: 'root', name: schema.name, arguments: args }
-        : { callId: id, name: schema.name, arguments: JSON.stringify(args) })
-      hooks.get('tools/pre-execute').fn(exec, () => null)
-      append('approval/asked', { id, callId: id, toolName: schema.name })
-      const completion = deferred()
-      const result = hooks.get('approval/request').fn({ agent, callId: id, toolName: schema.name }, () => completion.promise)
-      t.after(async () => { completion.resolve('rejected'); await result })
-      return [...globalThis[STATE].pendings.values()].at(-1)
-    },
-    sweep() { for (const timer of intervals.values()) if (timer.ms === 60000) timer.fn() },
-  }
-}
 
 for (const mode of ['native', 'ptc-inner']) {
   test(`rc.2 ${mode}: capture, match exact action and preserve the review prefix`, async (t) => {

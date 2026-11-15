@@ -11,7 +11,9 @@ While a tool call is waiting for your approval, it lets you **ask the executing 
 auto-review AI independently** — two isolated channels, free-form Q&A plus common preset
 questions, without leaving the approval card.
 
-Current version **v1.2.1** adapts to **DSH 0.2.2-rc.2** and is published to npm and as a GitHub release. Validation covers source inspection, upstream request replay and automated regressions; rc.2 live provider and browser acceptance remain untested.
+Current version **v1.3.1** supports **DSH 0.2.2-rc.2** and the **DSH Go v1.0.15 local native panel**, plus mobile Web keyboard, Back and reconnection improvements. The companion Go App patch adds **Consult** to native approval cards and selects the exact approval; that button requires rebuilding and installing the patched App, while updating only the plugin keeps the existing session entry points. Published to npm and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1). Native setup: [DSH Go guide](docs/DSH-GO.md); validation: [verification record](docs/VERIFICATION.md).
+
+In the patched App, tap **Consult** on an approval card to open its native panel, or use the session actions/plugin tab and select a record manually. Ask either AI, re-evaluate, stop tasks, and browse/copy paged answers. Approval decisions remain in Go's own approval card. Reconnecting keeps the same call and draft without replaying a question; switching hosts blocks the old panel. Native input uses Go's multiline field and keyboard/Back handling; images, presets, comparison, forwarding and timeout controls remain Web features. Read [Go integration and installation](docs/DSH-GO.md) for scope and verification commands. Tests cover real Flutter widgets, official Go SDK contracts and Chromium with mocked hosts; Android hardware, actual IMEs and live providers have not been tested.
 
 ![Approval consultation panel](docs/assets/panel-desktop.png)
 
@@ -56,7 +58,7 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 The plugin itself requires Node `>=20`; DSH 0.2.2 requires Node `>=24.9`. Historical live checks cover
 DSH Web `0.2.1-rc.2` and `0.2.2-rc.1`; rc.2 has automated source-level compatibility coverage.
 
-Current version **v1.2.1**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.2.1).
+Current version **v1.3.1**, published to npm ([`dsh-approval-consult`](https://www.npmjs.com/package/dsh-approval-consult)) and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1).
 
 ```bash
 npm install dsh-approval-consult
@@ -64,7 +66,7 @@ npm install dsh-approval-consult
 
 Or install the release tarball:
 
-1. Download `dsh-approval-consult-1.2.1.tgz` from
+1. Download `dsh-approval-consult-1.3.1.tgz` from
    [Releases](https://github.com/0tests/dsh-approval-consult/releases/latest).
 2. Open DSH Web → **Plugins** → **Add plugin** → **Install third-party plugin** and point it at the
    tarball's absolute path (or the download URL directly).

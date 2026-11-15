@@ -1,18 +1,19 @@
 # 兼容性说明（COMPATIBILITY）
 
-> 最后更新：2026-11-12。rc.2 的验证为官方源码核对与自动测试，实机验收范围另见 `VERIFICATION.md`。
+> 最后更新：2026-11-13。rc.2 与 Go 的验证包括源码契约、自动测试及模拟宿主的 Chromium 检查；真机范围另见 `VERIFICATION.md`。
 
 ## 1. 运行环境矩阵
 
 | 项 | 已验证 | 说明 / 兜底 |
 | --- | --- | --- |
 | DSH 实现 | `0.2.1-rc.2`、`0.2.2-rc.1` 历史实机；`0.2.2-rc.2` 自动验证 | rc.2 官方提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`；真实模型与 UI 未复测 |
+| DSH Go | `v1.0.15` 本机原生协议 + Web 手机 | 固定提交 `a9877420ab9aee121134faf01b6a92a39ce0b05b`；官方 SDK 与真实返回脚本通过自动验证，Android 实机待验收 |
 | Node | `>=20.0.0`（`package.json` engines） | 宿主实现只用 Node 内置模块（`node:fs`/`node:path`/`node:url`/`node:crypto`）；注意 DSH 0.2.2 宿主本身要求 Node >=24.9 |
 | OS | Windows 11（真实），路径处理用 `node:path` | 无平台专属调用；macOS/Linux 预期可用（未实机验证，CI 跑 Ubuntu/Windows） |
 | 浏览器 | Microsoft Edge / Chrome（Chromium 120+） | 依赖 `HTMLElement.showPopover` 时自动降级为 fixed 层；`color-mix()` 失败时回退到 CSS 变量兜底色 |
-| 屏幕 | 桌面 1440×900 / 2552×1234；手机 390×844 | 面板宽度 `min(468px, 100%)`；窄屏为底部弹层 |
+| 屏幕 | 历史桌面 1440×900 / 2552×1234、手机 390×844；本轮浏览器 393×852 / 852×393 | 模拟 330px / 200px 键盘遮挡；横屏短视口保留输入与发送，恢复高度后显示完整面板 |
 | 主题 | 深色、浅色（token）、自定义壁纸主题（`--dsw-alias-bg-base: transparent`） | 面板自带不透明表面色，不依赖可能透明的主题底色 |
-| 语言 | 简体中文、English（212 个 key 完全对齐） | 跟随 DSH locale；`ctx.locale.bind(NS)` 提供文案；缺少 key 时回退 key 字符串 |
+| 语言 | 简体中文、English（215 个 Web key 完全对齐） | 跟随 DSH locale；原生标签跟随 Go caps/event locale |
 
 ## 1.1 DSH 0.2.2 的额外宿主要求
 
@@ -36,6 +37,8 @@
 - CI 覆盖 Ubuntu/Windows × Node 20/24；Node 24 另外从固定提交加载官方纯函数，重放 native/PTC 审查请求并核对策略副本。
 
 ## 2. DSH 扩展面（必需）
+
+Go 原生部分另通过可选 `ctx.inject(['dshGo'], ...)` 注册 `consult` 面板，无桥接时不注册；详情、安装和本阶段限制见 [DSH Go](DSH-GO.md)。
 
 | 面 | 用途 | 缺失时行为 |
 | --- | --- | --- |
@@ -65,8 +68,8 @@
 
 ## 4. 与其它插件冲突面
 
-- **不修改**官方审批卡片 DOM、不接管 `approval/request` 的 `next()` 结果、不改 `req.signal`、
-  不监听全局键盘、不读其它插件 DOM。
+- **不修改**官方审批卡片 DOM、不接管 `approval/request` 的 `next()` 结果、不改 `req.signal`。
+  Go WebView 中仅在咨询面板挂载时监听 document 的 body Escape，并核对可见模态层顺序；其他菜单／审批为顶层时不处理。
 - 路由前缀独立（`/dsh-approval-consult/*`），slot id 独立（`approval-consult-*`），
   CSS 只注入一份 `<style data-plugin="dsh-approval-consult">`。
 - 与 `dsh-approval-timeout` 的交互仅通过它的公开 HTTP 路由；对它的客户端补丁见 `docs/PATCHES.md`
