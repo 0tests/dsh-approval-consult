@@ -67,18 +67,24 @@ export function host(t, config = {}, options = {}) {
       hooks.get('llm/stream').fn(options, () => null)
       return options
     },
-    pending(id = 'call-1', args = { command: 'echo test' }, ptc = false) {
+    pending(id = 'call-1', args = { command: 'echo test' }, ptc = false, review) {
       const exec = { agent, name: schema.name, callId: id, rootCallId: ptc ? 'root' : id, arguments: args,
         ...(ptc ? { parent: { callId: 'root' }, schema } : {}) }
-      append(ptc ? 'tool/ptc-dispatch-start' : 'tool/call', ptc
-        ? { subCallId: id, rootCallId: 'root', parentCallId: 'root', name: schema.name, arguments: args }
-        : { callId: id, name: schema.name, arguments: JSON.stringify(args) })
-      hooks.get('tools/pre-execute').fn(exec, () => null)
-      append('approval/asked', { id, callId: id, toolName: schema.name })
-      const completion = deferred()
-      const result = hooks.get('approval/request').fn({ agent, callId: id, toolName: schema.name }, () => completion.promise)
-      t.after(async () => { completion.resolve('rejected'); await result })
-      return [...globalThis[STATE].pendings.values()].at(-1)
+      const position = { turn: 1, step: events.length }
+      append('step/start', position)
+      const root = { id: exec.rootCallId, type: 'tool-call', name: ptc ? 'run_code' : schema.name, arguments: JSON.stringify(ptc ? { label: 'test' } : args) }
+      append('assistant/message', { ...position, message: { content: [root] } }, true)
+      append('tool/call', { ...position, callId: root.id, name: root.name, arguments: root.arguments })
+      if (ptc) append('tool/ptc-dispatch-start', { subCallId: id, rootCallId: 'root', parentCallId: 'root', name: schema.name, arguments: args })
+      const beforeApproval = hooks.get('tools/pre-execute').fn(exec, review ?? (() => null))
+      const ask = () => {
+        append('approval/asked', { id, callId: id, toolName: schema.name })
+        const completion = deferred()
+        const result = hooks.get('approval/request').fn({ agent, callId: id, toolName: schema.name }, () => completion.promise)
+        t.after(async () => { completion.resolve('rejected'); await result })
+        return [...globalThis[STATE].pendings.values()].at(-1)
+      }
+      return review ? Promise.resolve(beforeApproval).then(ask) : ask()
     },
     sweep() { for (const timer of intervals.values()) if (timer.ms === 60000) timer.fn() },
   }

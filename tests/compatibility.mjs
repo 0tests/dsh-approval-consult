@@ -49,8 +49,9 @@ export function reviewOptions(mode = 'native', args = { command: 'echo test' }) 
 for (const mode of ['native', 'ptc-inner']) {
   test(`rc.2 ${mode}: capture, match exact action and preserve the review prefix`, async (t) => {
     const h = host(t), original = reviewOptions(mode)
-    await h.capture(original, [{ type: 'text-delta', text: '{"risk":"medium","decision":"deny","reason":"needs confirmation"}' }, { type: 'finish', reason: { kind: 'stop' } }])
-    const record = h.pending('call-1', { command: 'echo test' }, mode === 'ptc-inner')
+    const record = await h.pending('call-1', { command: 'echo test' }, mode === 'ptc-inner', () => h.capture(original, [
+      { type: 'text-delta', text: '{"risk":"medium","decision":"deny","reason":"needs confirmation"}' }, { type: 'finish', reason: { kind: 'stop' } },
+    ]))
     assert.equal(record.review, h.state.reviews.get('A')[0])
     assert.equal(record.review.historyCount, 1)
     assert.equal(record.review.action.mode, mode)
@@ -59,6 +60,7 @@ for (const mode of ['native', 'ptc-inner']) {
     assert.equal((await h.request('/ask', { sessionId: 'A', consultKey: record.key, target: 'reviewer', question: 'why?' })).status, 200)
     await turn()
     assert.deepEqual(sent.messages.slice(0, original.messages.length), original.messages)
+    assert.notEqual(sent.system, original.system)
     assert.equal(sent.sessionId, 'A')
     assert.equal(sent.purpose, 'approval-consult')
     assert.equal(original.purpose, 'auto-review')
@@ -80,8 +82,10 @@ test('rc.2 parser uses the latest schema of the same mode and rejects incomplete
 test('legacy four-section reviews still match with their original messages', async (t) => {
   const h = host(t), original = reviewOptions()
   original.messages = [user('ENVIRONMENT\n\n{}\n\nPROJECT_INSTRUCTIONS\n\n[]\n\nFILTERED_HISTORY\n\n[]\n\nPENDING_ACTION\n\n' + JSON.stringify({ mode: 'native', ...schema, arguments: { command: 'echo test' } }))]
-  await h.capture(original, [{ type: 'text-delta', text: '{"risk":"medium","decision":"deny"}' }])
-  assert.equal(h.pending().review.options, original)
+  const record = await h.pending(undefined, undefined, false, () => h.capture(original, [
+    { type: 'text-delta', text: '{"risk":"medium","decision":"deny"}' }, { type: 'finish', reason: { kind: 'stop' } },
+  ]))
+  assert.equal(record.review.options, original)
 })
 
 for (const ptc of [false, true]) {
@@ -91,7 +95,7 @@ for (const ptc of [false, true]) {
     assert.equal(h.hooks.get('tools/pre-execute').prepend, true)
     assert.deepEqual(__test.normalizeArguments(record.advisorySnapshot.action.arguments), args)
     let sent
-    h.ctx.llm.stream = async function* (options) { sent = options; yield { type: 'text-delta', text: '{"risk":"low","decision":"allow"}' } }
+    h.ctx.llm.stream = async function* (options) { sent = options; yield { type: 'text-delta', text: '{"risk":"low","decision":"allow"}' }; yield { type: 'finish', reason: { kind: 'stop' } } }
     assert.equal((await h.request('/review', { sessionId: 'A', consultKey: record.key })).body.ok, true)
     assert.deepEqual(__test.normalizeArguments(__test.parseReviewRequest(sent).action.arguments), args)
     assert.equal(__test.parseReviewRequest(sent).action.mode, ptc ? 'ptc-inner' : 'native')
@@ -214,3 +218,62 @@ for (const cause of ['eviction', 'timeout']) {
     assert.equal(h.injections.length, 0)
   })
 }
+
+test('uncaptured execution identity cannot inherit an older review of identical arguments', async t => {
+  const h = host(t)
+  await h.capture(reviewOptions(), [{ type: 'text-delta', text: '{"risk":"low","decision":"allow"}' }, { type: 'finish', reason: { kind: 'stop' } }])
+  assert.equal(h.pending().review, null)
+})
+
+test('live and recovered denials without an optional reason retain the card as their source', async t => {
+  const h = host(t)
+  const reason = 'Auto review denied tool "shell"'
+  h.append('approval/asked', { id: 'a', callId: 'first', toolName: 'shell', reason })
+  await h.hooks.get('approval/request').fn({ agent: h.agent, callId: 'first', toolName: 'shell', reason }, () => 'rejected')
+  h.append('approval/decided', { id: 'a', outcome: 'rejected' })
+  h.append('approval/asked', { id: 'b', callId: 'second', toolName: 'shell', reason })
+  await h.request('/context?sessionId=A&callId=second')
+  const rows = [...h.state.pendings.values()]
+  assert.equal(rows.length, 2)
+  for (const record of rows) {
+    assert.equal(record.review.synthetic, true)
+    assert.equal(record.review.decision.decision, 'deny')
+    assert.equal(record.review.decision.risk, null)
+  }
+})
+
+test('captured and advisory streams require one final text block and normal termination', async t => {
+  const h = host(t)
+  const text = { type: 'text-delta', index: 1, text: '{"risk":"low","decision":"allow"}' }
+  const stop = { type: 'finish', reason: { kind: 'stop' } }
+  const cases = [[text], [text, stop, stop], [text, { ...text, index: 2 }, stop],
+    [text, { type: 'tool-call-delta', index: 2 }, stop], [text, { type: 'finish', reason: { kind: 'max-tokens' } }]]
+  for (const [i, chunks] of cases.entries()) {
+    const captured = await h.pending('captured-' + i, undefined, false, () => h.capture(reviewOptions(), chunks))
+    assert.equal(captured.review.decision, null)
+    assert.ok(captured.review.error)
+    const advisory = h.pending('advisory-' + i)
+    h.ctx.llm.stream = async function* () { yield* chunks }
+    const result = await h.request('/review', { sessionId: 'A', consultKey: advisory.key })
+    assert.equal(result.body.ok, false)
+    assert.equal(advisory.advisoryReview.decision, null)
+  }
+})
+
+test('reconstructing an older approval never borrows a reused call ID or a later header or surface', async t => {
+  const h = host(t)
+  const first = h.pending('repeat', { step: 'original' })
+  const originalApproval = h.events.find(event => event.type === 'approval/asked')
+  // Simulate reactivation with only the durable log. Later work reused the same call ID.
+  originalApproval.data.id = 'original'
+  h.state.pendings.delete(first.key)
+  h.state.pendingBySession.clear()
+  const position = { turn: 3, step: 2 }
+  h.append('step/start', position)
+  h.append('tool/call', { ...position, callId: 'repeat', name: 'shell', arguments: '{"step":"later"}' })
+  h.append('request/header', { header: { config: { provider: 'new', model: 'new' } } })
+  const { body } = await h.request('/context?sessionId=A&callId=repeat&approvalId=original')
+  const recovered = h.state.pendings.get(body.consultKey)
+  assert.deepEqual(recovered.exec.args, { step: 'original' })
+  assert.equal(recovered.advisorySnapshot, null)
+})

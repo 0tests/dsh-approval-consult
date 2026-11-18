@@ -10,7 +10,7 @@ const deferred = () => {
   return { promise, resolve }
 }
 
-function host() {
+function host(config = {}) {
   delete globalThis[STATE_KEY]
   const routes = new Map(), hooks = new Map(), intervals = new Map()
   const events = [], injections = []
@@ -50,7 +50,12 @@ function host() {
       globalThis.clearInterval = originalClearInterval
     }
   }
-  const dispose = withClock(() => apply(ctx, { reviewerMode: 'on', maxAttachmentsPerConsult: 1 }, { log: { info() {}, warn() {}, error() {} } }))
+  let api
+  const install = (previousState) => withClock(() => apply(ctx,
+    { reviewerMode: 'on', maxAttachmentsPerConsult: 1, ...config },
+    { previousState, log: { info() {}, warn() {}, error() {} }, native: { registerDshGo(_ctx, value) { api = value } } },
+  ))
+  let dispose = install()
   const begin = (suffix, method = 'GET', headers = {}) => {
     const req = Object.assign(new EventEmitter(), { url: `/dsh-approval-consult${suffix}`, method, headers, destroy() {} })
     const done = deferred()
@@ -75,13 +80,20 @@ function host() {
   const uploadUrl = (key) => `/attachment?sessionId=A&consultKey=${encodeURIComponent(key)}&mediaType=image/png`
   const imageUrl = (key, id) => `/attachment?sessionId=A&consultKey=${encodeURIComponent(key)}&id=${encodeURIComponent(id)}`
   return {
-    begin, post, llm, storage, injections, uploadUrl, imageUrl,
+    begin, post, llm, storage, injections, uploadUrl, imageUrl, ctx, hooks, events, agent,
+    records: (scope = { sessionId: 'A' }) => api.recordSet(scope),
+    reload() { dispose = install(withClock(() => dispose({ forReload: true }))) },
+    reenable() { withClock(dispose); dispose = install() },
     get saves() { return saves }, get reads() { return reads }, get snapshots() { return snapshots },
     get state() { return globalThis[STATE_KEY] },
     upload: (key) => post(uploadUrl(key), Buffer.from('mock')),
     async rebuild(id = '1') {
-      events.push({ type: 'tool/call', data: { callId: id, name: 'shell', arguments: {} } })
-      events.push({ type: 'approval/asked', data: { id, callId: id, toolName: 'shell' } })
+      const position = { turn: 1, step: events.length }
+      events.push({ seq: events.length, type: 'step/start', data: position })
+      session.surface.nodes.push(events.length)
+      events.push({ seq: events.length, type: 'assistant/message', data: { ...position, message: { content: [{ type: 'tool-call', id, name: 'shell', arguments: '{}' }] } } })
+      events.push({ seq: events.length, type: 'tool/call', data: { ...position, callId: id, name: 'shell', arguments: '{}' } })
+      events.push({ seq: events.length, type: 'approval/asked', data: { id, callId: id, toolName: 'shell' } })
       const r = await begin(`/context?sessionId=A&callId=${id}`).promise
       assert.equal(r.status, 200)
       assert.ok(r.body.consultKey.startsWith('re:'))
@@ -106,8 +118,8 @@ function host() {
 }
 
 let passed = 0
-async function test(name, fn) {
-  const h = host()
+async function test(name, fn, config) {
+  const h = host(config)
   try { await fn(h); passed++; console.log(`  ok  ${name}`) } finally { h.dispose() }
 }
 
@@ -259,6 +271,125 @@ await test('卸载时停止后台检查并取消进行中的重新评估', async
   h.dispose()
   assert.equal(model.signal.aborted, true)
   assert.equal((await review).body.ok, false)
+})
+
+await test('cold native sessions recover every unresolved durable ID and keep distinct requests for the same call', async (h) => {
+  for (const [id, callId] of [['1', 'repeat'], ['2', 'repeat'], ['3', undefined], ['4', 'ended']]) {
+    h.events.push({ type: 'approval/asked', data: { id, callId, toolName: 'shell' } })
+  }
+  h.decide('4')
+  const found = h.records()
+  assert.equal(found.complete, true)
+  assert.deepEqual(found.records.map(r => r.approvalId).sort(), ['1', '2', '3'])
+  assert.equal(new Set(found.records.map(r => r.consultKey)).size, 3)
+  assert.equal((await h.begin('/context?sessionId=A&callId=repeat').promise).body.pending, null)
+  const second = await h.begin('/context?sessionId=A&approvalId=2&callId=repeat').promise
+  assert.equal(second.body.pending.approvalId, '2')
+  assert.equal((await h.begin('/context?sessionId=A&approvalId=2&callId=wrong').promise).body.pending, null)
+  assert.equal((await h.begin('/context?sessionId=A&approvalId=1&consultKey=' + second.body.consultKey).promise).body.pending, null)
+  assert.deepEqual(h.records().records.map(r => r.consultKey).sort(), found.records.map(r => r.consultKey).sort())
+  h.agent.session.snapshotEvents = () => { throw new Error('session unavailable') }
+  assert.equal(h.records().complete, false)
+})
+
+await test('recovery binds each approval to its preceding tool dispatch, argument identity and PTC mode', async (h) => {
+  const log = (type, data) => h.events.push({ type, data, seq: h.events.length })
+  log('tool/call', { callId: 'same', name: 'shell', arguments: { value: 'original' } })
+  log('approval/asked', { id: 'original-approval', callId: 'same', toolName: 'shell' })
+  log('step/end', {})
+  log('step/start', {})
+  log('tool/ptc-dispatch-start', { subCallId: 'same', parentCallId: 'parent', rootCallId: 'root', name: 'shell', arguments: { value: 'later' } })
+  log('approval/asked', { id: 'later-approval', callId: 'same', toolName: 'shell' })
+  log('tool/call', { callId: 'different', name: 'another-tool', arguments: { value: 'wrong-tool' } })
+  log('approval/asked', { id: 'mismatch', callId: 'different', toolName: 'shell' })
+  const get = async (id) => {
+    const result = await h.begin('/context?sessionId=A&approvalId=' + id).promise
+    return h.state.pendings.get(result.body.consultKey)
+  }
+  const first = await get('original-approval'), second = await get('later-approval')
+  assert.deepEqual(first.exec.args, { value: 'original' })
+  assert.equal(first.exec.parent, undefined)
+  assert.deepEqual(second.exec.args, { value: 'later' })
+  assert.equal(second.exec.parent.callId, 'parent')
+  assert.equal((await get('mismatch')).exec, undefined)
+})
+
+await test('overflow listing preserves active threads and provides an exact, resident-bounded choice', async (h) => {
+  h.events.push({ type: 'approval/asked', data: { id: 'first', toolName: 'shell' } })
+  const first = h.records().records[0]
+  h.events.push({ type: 'approval/asked', data: { id: 'second', toolName: 'shell' } })
+  const found = h.records()
+  assert.equal(found.complete, false)
+  assert.equal(found.records.length, 2)
+  assert.equal(h.state.pendings.get(first.consultKey).resolvedAt, null)
+  assert.equal(h.state.pendings.size, 1)
+  const second = found.records.find(record => record.approvalId === 'second')
+  assert.equal((await h.begin('/context?sessionId=B&consultKey=' + second.consultKey).promise).body.pending, null)
+  const detail = (await h.begin('/context?sessionId=A&consultKey=' + second.consultKey).promise).body
+  assert.equal(detail.pending.approvalId, 'second')
+  assert.equal(detail.consultKey, second.consultKey)
+  assert.equal(h.state.pendings.size, 1)
+}, { maxPendingPerSession: 1 })
+
+await test('call-less approval observes cancellation immediately even while the responder has not settled', async (h) => {
+  h.events.push({ type: 'approval/asked', data: { id: 'standalone', toolName: 'shell', reason: 'ask first' } })
+  const signal = new AbortController(), responder = deferred()
+  const pending = h.hooks.get('approval/request')({ agent: h.agent, toolName: 'shell', reason: 'ask first', signal: signal.signal }, () => responder.promise)
+  const record = [...h.state.pendings.values()][0]
+  assert.equal(record.approvalId, 'standalone')
+  const uploaded = await h.upload(record.key)
+  assert.equal(uploaded.status, 200)
+  signal.abort()
+  assert.equal(record.outcome, 'cancelled')
+  assert.equal(h.state.attachments.size, 0)
+  assert.equal((await h.post('/ask', { sessionId: 'A', consultKey: record.key, question: 'still waiting?' })).status, 409)
+  responder.resolve('allowed-once')
+  assert.equal(await pending, 'allowed-once')
+  assert.equal(record.outcome, 'cancelled')
+})
+
+await test('identical call-less requests are not guessed from log order', async (h) => {
+  for (const id of ['first', 'second']) h.events.push({ type: 'approval/asked', data: { id, toolName: 'shell' } })
+  const responder = deferred(), signal = new AbortController()
+  const pending = h.hooks.get('approval/request')({ agent: h.agent, toolName: 'shell', signal: signal.signal }, () => responder.promise)
+  const record = [...h.state.pendings.values()][0]
+  assert.equal(record.approvalId, undefined)
+  assert.equal(h.records().complete, false)
+  signal.abort()
+  assert.equal(record.outcome, 'cancelled')
+  responder.resolve('cancelled')
+  await pending
+})
+
+await test('a relay only reaches the current registered agent for this session', async (h) => {
+  const key = await h.rebuild()
+  const delivered = []
+  h.ctx.agents.get = () => ({ ...h.agent, inject: (message) => delivered.push(message) })
+  const input = { sessionId: 'A', consultKey: key, kind: 'note', text: 'current agent only' }
+  assert.equal((await h.post('/relay', input)).status, 200)
+  assert.equal(h.injections.length, 0)
+  assert.equal(delivered.length, 1)
+  h.ctx.agents.get = () => null
+  assert.equal((await h.post('/relay', input)).status, 409)
+  h.ctx.agents.get = () => ({ ...h.agent, session: { id: 'B' } })
+  assert.equal((await h.post('/relay', input)).status, 409)
+})
+
+await test('only explicit hot replacement preserves records; disable releases captured state', async (h) => {
+  const key = await h.rebuild()
+  h.captureMain()
+  const state = h.state
+  h.reload()
+  assert.equal(h.state, state)
+  assert.ok(state.pendings.has(key))
+  assert.ok(state.mainRequests.has('A'))
+  h.reenable()
+  assert.notEqual(h.state, state)
+  assert.equal(state.pendings.size, 0)
+  assert.equal(state.mainRequests.size, 0)
+  assert.equal(h.state.pendings.size, 0)
+  h.dispose()
+  assert.equal(globalThis[STATE_KEY], undefined)
 })
 
 console.log(`\nsecurity lifecycle ok: ${passed} 项`)
