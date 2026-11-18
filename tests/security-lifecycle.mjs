@@ -359,6 +359,23 @@ await test('call-less approval observes cancellation immediately even while the 
   assert.equal(record.outcome, 'cancelled')
 })
 
+await test('recovering log access merges one unambiguous live record without changing its key', async (h) => {
+  const snapshot = h.agent.session.snapshotEvents
+  h.events.push({ type: 'approval/asked', data: { id: 'single', toolName: 'shell' } })
+  h.agent.session.snapshotEvents = () => { throw new Error('offline') }
+  const responder = deferred()
+  const request = h.hooks.get('approval/request')({ agent: h.agent, toolName: 'shell' }, () => responder.promise)
+  const [live] = h.state.pendings.values()
+  assert.equal(live.approvalId, undefined)
+  assert.equal(h.records().complete, false)
+  h.agent.session.snapshotEvents = snapshot
+  const recovered = h.records()
+  assert.equal(recovered.complete, true)
+  assert.deepEqual(recovered.records.map(r => [r.consultKey, r.approvalId]), [[live.key, 'single']])
+  responder.resolve('rejected')
+  await request
+})
+
 await test('identical call-less requests are not guessed from log order', async (h) => {
   for (const id of ['first', 'second']) h.events.push({ type: 'approval/asked', data: { id, toolName: 'shell' } })
   const responder = deferred(), signal = new AbortController()
