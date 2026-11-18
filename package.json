@@ -36,7 +36,7 @@
     "NOTICE.md"
   ],
   "scripts": {
-    "test": "node tests/unit.mjs && node tests/locale-parity.mjs && node tests/css-classes.mjs && node tests/security.mjs && node tests/security-lifecycle.mjs && node tests/compatibility.mjs && node tests/client-lifecycle.mjs && node tests/dsh-go.mjs && node tests/mobile.mjs",
+    "test": "node tests/unit.mjs && node tests/locale-parity.mjs && node tests/css-classes.mjs && node tests/security.mjs && node tests/security-lifecycle.mjs && node tests/backend-budget-lifecycle.mjs && node tests/compatibility.mjs && node tests/client-lifecycle.mjs && node tests/web-approval-lifecycle.mjs && node tests/dsh-go.mjs && node tests/mobile.mjs",
     "test:upstream": "node tests/upstream-contract.mjs",
     "test:go": "node tests/dsh-go-contract.mjs",
     "test:browser": "node tests/mobile-browser.mjs",
@@ -74,11 +74,15 @@
     "title": { "zh": "审批咨询", "en": "Approval consult" },
     "icon": "chat",
     "contributes": {
+      "composer.tools": [
+        { "id": "consult-tool", "label": { "zh": "审批咨询", "en": "Consult" }, "icon": "chat", "panel": "consult" }
+      ],
       "session.actions": [
         { "id": "open-consult", "label": { "zh": "审批咨询", "en": "Consult" }, "icon": "chat", "effect": { "type": "open", "page": "panel:consult" } }
       ],
       "panels": [
-        { "id": "consult", "title": { "zh": "审批咨询", "en": "Consult" }, "icon": "chat", "placement": ["session.tab", "chat.panel"], "presentation": "sheet" }
+        { "id": "consult", "title": { "zh": "审批咨询", "en": "Consult" }, "icon": "chat", "placement": ["session.tab", "chat.panel"], "presentation": "sheet" },
+        { "id": "consult-live", "title": { "zh": "实时回答", "en": "Live answers" }, "icon": "chat", "placement": ["chat.panel"], "presentation": "sheet" }
       ]
     }
   },

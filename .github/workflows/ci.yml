@@ -33,19 +33,32 @@ jobs:
       - name: Replay upstream review request construction
         if: matrix.node == '24'
         run: npm run test:upstream -- .upstream-dsh
-      - name: Read pinned DSH Go v1.0.15 contracts
-        if: matrix.node == '24'
-        uses: actions/checkout@v4
+
+  native-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        go-ref:
+          - a9877420ab9aee121134faf01b6a92a39ce0b05b # v1.0.15
+          - c1a84e3f833ad59ff07a5027994dae3935907a2d # v1.2.0
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/checkout@v4
         with:
           repository: ccch1mneyyy/dsh-Go
-          ref: a9877420ab9aee121134faf01b6a92a39ce0b05b
+          ref: ${{ matrix.go-ref }}
           path: .upstream-go
           sparse-checkout: |
             sdk/plugin-kit
+            runtime/bridge/dsh-go-bridge/lib/native
             app/assets/web
           persist-credentials: false
-      - name: Validate native panels and replay Go Back
-        if: matrix.node == '24'
+      - name: Validate native panels, bridge isolation and Go Back
         run: npm run test:go -- .upstream-go
 
   mobile-browser:
