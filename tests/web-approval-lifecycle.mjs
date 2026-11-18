@@ -7,7 +7,7 @@ const tick = () => new Promise((resolve) => setImmediate(resolve))
 function approvalClient(names, overrides = {}) {
   const answers = []
   let activeSession = 'A', live
-  const card = (key) => ({ kind: 'approval', key, answerable: true, answer: async (outcome) => answers.push([key, outcome]) })
+  const card = (key) => ({ kind: 'approval', key, callId: '1', answerable: true, answer: async (outcome) => answers.push([key, outcome]) })
   live = card('approval:1')
   const h = client(['panelApproval', ...names], {
     currentSession: { get: () => activeSession },

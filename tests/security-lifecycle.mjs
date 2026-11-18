@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import { apply } from '../lib/impl.js'
+import { apply as applyShim } from '../lib/index.js'
 
 const STATE_KEY = '__DSH_APPROVAL_CONSULT_STATE_V1__'
 const deferred = () => {
@@ -314,6 +315,16 @@ await test('recovery binds each approval to its preceding tool dispatch, argumen
   assert.equal((await get('mismatch')).exec, undefined)
 })
 
+await test('forked sessions only recover their own approval events', async (h) => {
+  h.events.push(
+    { seq: 0, type: 'approval/asked', data: { id: 'parent', toolName: 'shell' } },
+    { seq: 1, type: 'approval/asked', data: { id: 'child', toolName: 'shell' } },
+  )
+  h.agent.session.isOwnSeq = (seq) => seq === 1
+  assert.deepEqual(h.records().records.map(r => r.approvalId), ['child'])
+  assert.equal((await h.begin('/context?sessionId=A&approvalId=parent').promise).body.pending, null)
+})
+
 await test('overflow listing preserves active threads and provides an exact, resident-bounded choice', async (h) => {
   h.events.push({ type: 'approval/asked', data: { id: 'first', toolName: 'shell' } })
   const first = h.records().records[0]
@@ -390,6 +401,22 @@ await test('only explicit hot replacement preserves records; disable releases ca
   assert.equal(h.state.pendings.size, 0)
   h.dispose()
   assert.equal(globalThis[STATE_KEY], undefined)
+})
+
+await test('disabling through the public shim releases state before re-enabling', async (h) => {
+  h.dispose()
+  let stop
+  h.ctx.effect = (effect) => { stop = effect() }
+  h.ctx.logger = { info() {}, warn() {}, error() {} }
+  await applyShim(h.ctx, {})
+  try {
+    h.captureMain()
+    assert.ok(h.state.mainRequests.has('A'))
+  } finally { stop() }
+  assert.equal(h.state, undefined)
+  assert.equal(globalThis.__DSH_APPROVAL_CONSULT__, undefined)
+  await applyShim(h.ctx, {})
+  try { assert.equal(h.state.mainRequests.size, 0) } finally { stop() }
 })
 
 console.log(`\nsecurity lifecycle ok: ${passed} 项`)
