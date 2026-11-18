@@ -28,12 +28,8 @@
         # 开发/排障接口（/debug/inspect、selftest、events、inject、features、synthetic-approval）。
         # 默认关闭；它们能注入会话内容/切换能力开关，生产环境不要打开。
         devTools: false
-        # 自动拒绝倒计时（可选集成 dsh-approval-timeout）的暂停策略：
-        #   on-send 仅当用户真正开始提问时暂停（默认；打开面板不会动倒计时）
-        #   on-open 打开面板即暂停
-        #   off     完全不动别人的倒计时，只保留面板里的手动「暂停倒计时」按钮
-        # 说明：该插件的 /cancel 是全局的，会同时取消其它待审批项的倒计时；
-        # 自动路径（on-send/on-open）探测到还有别的待审批项时会拒绝自动暂停并提示用户。
+        # 倒计时旧配置兼容项。dsh-approval-timeout 只提供全局取消；
+        # 所有策略都需用户在面板中确认，才暂停本主机所有会话的倒计时。
         timeoutAutoPause: 'on-send'
         # 审查 AI 能力：auto = 按官方自动审查插件是否安装/启用自动检测（默认；
         # 没装时整个咨询台只保留「执行 AI」通道）；on = 强制显示；off = 强制只问执行 AI。

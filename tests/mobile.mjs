@@ -132,6 +132,168 @@ test('GET timeout aborts a hung fetch and removes its timer', async () => {
   assert.equal(cleared, 1)
 })
 
+test('scheduled refreshes let a slow context response complete', async () => {
+  const h = client(['loadContext'])
+  const first = h.ctx.loadContext()
+  for (let i = 0; i < 3; i++) await h.ctx.loadContext({ silent: true })
+  assert.equal(h.requests.length, 1)
+  h.requests[0].resolve({ revision: 1 })
+  await first
+  assert.equal(h.state.store.context.revision, 1)
+  assert.equal(h.state.store.loadingContext, false)
+  const next = h.ctx.loadContext({ silent: true })
+  assert.equal(h.requests.length, 2)
+  h.requests[1].resolve({ revision: 2 })
+  await next
+})
+
+const deliveryFns = ['sendQuestion', 'retryThread', 'stopThread', 'findThread', 'updateThread', 'mergeThreads', 'resumeStreamingPolls', 'pollJob', 'transientError']
+
+function delivery() {
+  return client(deliveryFns, { loadContext() {}, reconnectLater() {} })
+}
+
+function receiveSnapshot(h, turn) {
+  h.state.store.threads = h.ctx.mergeThreads({ executor: [turn], reviewer: [] }, h.state.store.threads)
+  h.ctx.resumeStreamingPolls()
+}
+
+test('snapshot before ask acknowledgement retains exactly one poll starting at the saved cursor', async () => {
+  const h = delivery()
+  const ask = h.ctx.sendQuestion('executor')
+  const pending = h.state.store.threads.executor[0]
+  receiveSnapshot(h, { ...pending, id: 'q:1', jobId: 'j:1', answer: 'A' })
+  h.requests[0].resolve({ threadId: 'q:1', jobId: 'j:1', consultKey: 'ac:A' })
+  await ask
+  assert.equal(h.scheduled.filter((task) => task.ms === 70).length, 1)
+  const tick = h.scheduled.shift()()
+  assert.match(h.requests[1].url, /cursor=1/)
+  h.requests[1].resolve({ delta: 'B', cursor: 2, status: 'done' })
+  await tick
+  assert.equal(h.state.store.threads.executor[0].answer, 'AB')
+})
+
+for (const ack of ['first', 'lost', 'other-panel']) {
+  test(`Stop before ask acknowledgement (${ack}) cancels the original job once`, async () => {
+    const h = delivery()
+    const ask = h.ctx.sendQuestion('executor')
+    const pending = h.state.store.threads.executor[0]
+    await h.ctx.stopThread('executor', pending.id)
+    assert.equal(h.state.store.threads.executor[0].status, 'stopping')
+    const accepted = { threadId: 'q:1', jobId: 'j:1', consultKey: 'ac:A' }
+    if (ack === 'other-panel') {
+      h.state.pollGeneration++
+      Object.assign(h.state.store, { sessionId: 'B', consultKey: 'ac:B', threads: { executor: [], reviewer: [] } })
+    }
+    if (ack === 'lost') {
+      h.requests[0].reject(Object.assign(new Error('disconnected'), { code: 'network' }))
+      await ask
+      h.ctx.retryThread('executor', pending.id)
+      assert.equal(h.requests.length, 1)
+      receiveSnapshot(h, { ...pending, id: 'q:1', jobId: 'j:1' })
+    } else {
+      h.requests[0].resolve(accepted)
+      await ask
+    }
+    assert.equal(h.requests.length, 2)
+    assert.match(h.requests[1].url, /\/cancel$/)
+    assert.deepEqual(JSON.parse(h.requests[1].options.body), { sessionId: 'A', consultKey: 'ac:A', jobId: 'j:1' })
+    assert.equal(h.scheduled.length, 0)
+    h.requests[1].resolve({ status: 'cancelled' })
+    await new Promise((resolve) => setImmediate(resolve))
+    if (ack === 'other-panel') assert.equal(h.state.store.threads.executor.length, 0)
+    else assert.equal(h.state.store.threads.executor[0].status, 'cancelled')
+    assert.equal(h.state.runtime.pendingStops.size, 0)
+  })
+}
+
+test('failed cancel can be retried and does not claim the host stopped', async () => {
+  const h = delivery()
+  h.state.store.threads.executor.push({ id: 'q:1', jobId: 'j:1', status: 'streaming' })
+  const stop = h.ctx.stopThread('executor', 'q:1')
+  h.requests[0].reject(new Error('lost cancel'))
+  await stop
+  assert.equal(h.state.store.threads.executor[0].status, 'streaming')
+  const retry = h.ctx.stopThread('executor', 'q:1')
+  h.requests[1].resolve({ status: 'done' })
+  await retry
+  assert.equal(h.state.store.threads.executor[0].status, 'done')
+})
+
+test('a closed panel with a lost ask receipt reconciles and stops only the original request', async () => {
+  const h = client([...deliveryFns, 'watchdogStreamingPolls', 'reconcileDetachedStop'], { URLSearchParams })
+  const ask = h.ctx.sendQuestion('executor')
+  const pending = h.state.store.threads.executor[0]
+  await h.ctx.stopThread('executor', pending.id)
+  h.state.pollGeneration++
+  Object.assign(h.state.store, { open: false, sessionId: 'B', consultKey: 'ac:B', threads: { executor: [], reviewer: [] } })
+  h.requests[0].reject(Object.assign(new Error('receipt lost'), { code: 'network' }))
+  await ask
+  h.ctx.watchdogStreamingPolls()
+  const url = new URL(h.requests[1].url, 'https://fixture.invalid')
+  assert.equal(url.searchParams.get('sessionId'), 'A')
+  assert.equal(url.searchParams.get('consultKey'), 'ac:A')
+  h.requests[1].resolve({ consultKey: 'ac:A', threads: { executor: [
+    { id: 'q:other', jobId: 'j:other', requestId: 'other', status: 'streaming' },
+    { id: 'q:1', jobId: 'j:1', requestId: pending.requestId, status: 'streaming' },
+  ] } })
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.deepEqual(JSON.parse(h.requests[2].options.body), { jobId: 'j:1', consultKey: 'ac:A', sessionId: 'A' })
+  h.requests[2].resolve({ status: 'cancelled' })
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(h.state.runtime.pendingStops.size, 0)
+  assert.equal(h.state.store.threads.executor.length, 0)
+})
+
+test('an interrupted 200 response and an incomplete ask receipt both preserve the request id for retry', async () => {
+  const wire = client(['requestJson'], { fetch: async () => ({ ok: true, status: 200, json() { throw new TypeError('body interrupted') } }) })
+  let deliveryError
+  await assert.rejects(wire.ctx.requestJson('/dsh-approval-consult/ask', { method: 'POST' }), (error) => { deliveryError = error; return error.code === 'network' })
+  for (const incomplete of [false, true]) {
+    const h = delivery()
+    const ask = h.ctx.sendQuestion('executor')
+    const key = JSON.parse(h.requests[0].options.body).requestId
+    if (incomplete) h.requests[0].resolve({ ok: true })
+    else h.requests[0].reject(deliveryError)
+    await ask
+    const failed = h.state.store.threads.executor[0]
+    assert.equal(failed.uncertain, true)
+    h.state.store.draft = 'a new question'
+    h.ctx.retryThread('executor', failed.id)
+    assert.equal(JSON.parse(h.requests[1].options.body).requestId, key)
+    assert.equal(h.state.store.draft, 'a new question')
+    h.requests[1].resolve({ threadId: 'q:1', jobId: 'j:1', consultKey: 'ac:A' })
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+})
+
+test('sending a preset preserves the draft and a delayed receipt only clears its own images', async () => {
+  const revoked = []
+  const h = client([...deliveryFns, 'readyAttachmentMeta', 'clearAttachments'], {
+    revokeAttachmentPreview(item) { revoked.push(item.id) },
+  })
+  h.state.store.attachments = [{ id: 'att:1', status: 'ready' }]
+  const ask = h.ctx.sendQuestion('executor', 'preset')
+  assert.equal(h.state.store.draft, 'why?')
+  h.state.store.attachments.push({ id: 'att:2', status: 'uploading' })
+  h.requests[0].resolve({ threadId: 'q:1', jobId: 'j:1', consultKey: 'ac:A' })
+  await ask
+  assert.deepEqual(Array.from(h.state.store.attachments, (item) => item.id), ['att:2'])
+  assert.deepEqual(revoked, ['att:1'])
+})
+
+test('a snapshot acknowledging a pictured ask preserves images added after the POST', async () => {
+  const h = client([...deliveryFns, 'readyAttachmentMeta', 'clearAttachments'], { revokeAttachmentPreview() {}, reconnectLater() {} })
+  h.state.store.attachments = [{ id: 'att:1', status: 'ready' }]
+  const ask = h.ctx.sendQuestion('executor')
+  const pending = h.state.store.threads.executor[0]
+  h.requests[0].reject(Object.assign(new Error('missing receipt'), { code: 'network' }))
+  await ask
+  h.state.store.attachments.push({ id: 'att:2', status: 'ready' })
+  receiveSnapshot(h, { ...pending, id: 'q:1', jobId: 'j:1', status: 'done' })
+  assert.deepEqual(Array.from(h.state.store.attachments, (item) => item.id), ['att:2'])
+})
+
 function viewport(options = {}) {
   const { height = 800, keyboard = 0, vv, insets = {} } = options
   return client(['readViewport'], {
