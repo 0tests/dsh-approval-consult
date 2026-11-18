@@ -136,7 +136,7 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 
 ### POST `/ask`
 
-请求 `{ sessionId, callId?, toolName?, consultKey?, target: 'executor'|'reviewer', question }`
+请求 `{ sessionId, callId?, toolName?, consultKey?, target: 'executor'|'reviewer', question, requestId?, attachmentIds? }`
 → `{ ok: true, jobId: "j:9", threadId: "q:8", consultKey: "ac:7", target: "executor" }`
 
 错误码：`no-pending`、`approval-resolved`、`executor-context-missing`、`reviewer-context-missing`、
@@ -187,7 +187,7 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 ### 历史上入口：`conversation.chat.turnTail` 槽（新增注册）
 
 - 新增一个 list 注册：`id: 'approval-consult-history'`，`order: 40`。
-- 组件拿到 `props.sessionId` 与 ownerProps `turn`；挂载时调用一次 `/history`（按 sessionId 缓存 30s，避免每个 Turn 都请求），
+- 组件拿到 `props.sessionId` 与 ownerProps `turn`；挂载时读取 `/history`（同会话请求合并、缓存 30 秒）；接受新问答、任务终结或审批状态变化时通知已挂载的入口重新读取，
   没有记录返回 `null`；有记录时渲染一个小 chip：`💬 审批咨询记录 · N`。
 - 点击：`store.open = true; store.mode = 'history'; store.historyItems = items`，复用同一个抽屉/底部弹层，
   以只读模式列出每次审批：工具名、时间、审批结果、风险/结论、两侧问答线程（按时间顺序，不再显示提问框与决策按钮）。
@@ -205,18 +205,16 @@ UI 负责第 3 节的状态机与第 4 节的视觉/交互。改动接口时同�
 要求：
 - 探测失败（404/非 JSON/网络错）就完全隐藏倒计时 UI，不能报错。
 - 倒计时存在且未取消时，显示小 chip “自动拒绝倒计时 {N}s”；剩余 ≤15s 变危险色。
-- **暂停策略由宿主配置 `features.timeoutAutoPause` 决定**（默认 `on-send`）：
-  - `on-send`：打开面板不打扰倒计时；用户**第一次发送问题**时自动暂停一次并提示；
-  - `on-open`：打开面板即自动暂停；
-  - `off`：完全不自动暂停，只保留 chip 的手动暂停。
-- **全局副作用防护**：该插件 `/cancel` 会取消所有待审批项的倒计时。自动暂停前必须重新探测 `/status`，
-  若存在其它未取消的待审批项（非当前 callId/toolName）则不自动暂停，改为 toast 提示用户；
-  只有用户**显式点击** chip 时才（force）执行全局取消，且 chip 的 tooltip 必须说明会同时取消其它项。
-- 该插件取消后不可恢复，属于已知限制。
+- 倒计时按当前审批的调用 ID 唯一匹配。历史页只读咨询记录。
+- 配套插件只提供全局 `/cancel`。打开面板和发送提问均保留各会话计时；兼容配置 `timeoutAutoPause` 不会触发全局取消。
+- 用户点暂停后，面板说明会同时取消本主机所有会话的倒计时且操作不可恢复。再次确认时复查当前审批与状态；收到成功 HTTP 回执并查到已取消状态后才显示成功。
+
 
 ## 3. 客户端状态机（模块级 store + useSyncExternalStore）
 
-打开、关闭或切换面板会更新请求代数。`/context`、`/ask`、`/review`、图片上传的延迟响应只能写回发起时的面板；同面板 context 请求按最新一次请求序号处理。停止回答或接受宿主终态快照后，已经发出的 poll 响应不得再次追加正文或恢复 streaming。
+Web 的 `PendingApproval.key` 是浏览器递增的渲染标识，绑定本地响应按钮，点击时重新读取当前会话和卡片。首次查询材料使用 `callId`；取得 `consultKey` 后发送和回读都固定在该记录。缺少 `callId` 时保留原卡决策，显示材料无法定位。
+
+打开、关闭或切换面板会更新请求代数。`/context`、`/ask`、`/review`、图片上传的延迟响应只能写回发起时的面板；同面板静默刷新复用在途请求；显式刷新使用新的请求序号。停止回答或接受宿主终态快照后，已经发出的 poll 响应不得再次追加正文或恢复 streaming。
 
 宿主支持 rc.2 逐条 JSON 审查消息和旧四段材料，客户端继续消费同一套 reviewer 字段。审查失败、中止、截断或风险/决定不合法时不提供有效结论；缺少工具参数/schema 时 advisory 不可用。能力开关以可选插件实际 ACTIVE 状态为准。
 

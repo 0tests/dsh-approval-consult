@@ -11,9 +11,7 @@ While a tool call is waiting for your approval, it lets you **ask the executing 
 auto-review AI independently** — two isolated channels, free-form Q&A plus common preset
 questions, without leaving the approval card.
 
-Current version **v1.3.1** supports **DSH 0.2.2-rc.2** and the **DSH Go v1.0.15 local native panel**, plus mobile Web keyboard, Back and reconnection improvements. The companion Go App patch adds **Consult** to native approval cards and selects the exact approval; that button requires rebuilding and installing the patched App, while updating only the plugin keeps the existing session entry points. Published to npm and as a [GitHub release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1). Native setup: [DSH Go guide](docs/DSH-GO.md); validation: [verification record](docs/VERIFICATION.md).
-
-In the patched App, tap **Consult** on an approval card to open its native panel, or use the session actions/plugin tab and select a record manually. Ask either AI, re-evaluate, stop tasks, and browse/copy paged answers. Approval decisions remain in Go's own approval card. Reconnecting keeps the same call and draft without replaying a question; switching hosts blocks the old panel. Native input uses Go's multiline field and keyboard/Back handling; images, presets, comparison, forwarding and timeout controls remain Web features. Read [Go integration and installation](docs/DSH-GO.md) for scope and verification commands. Tests cover real Flutter widgets, official Go SDK contracts and Chromium with mocked hosts; Android hardware, actual IMEs and live providers have not been tested.
+The published **v1.3.1** opens the native consultation panel from session actions or the session plugin tab. This branch adds **+ → Consult** to the chat composer on stock DSH Go v1.0.15 and v1.2.0 with the local engine. Install the plugin from this branch and restart the engine if needed. You can ask about a pending approval in the sheet, then return to its card to decide. [v1.3.1 release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1) · [Installation, supported hosts and verification](docs/DSH-GO.md)
 
 ![Approval consultation panel](docs/assets/panel-desktop.png)
 
@@ -25,10 +23,7 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 
 - **Ask the executor AI** — reuses the exact captured prefix of your main conversation request, so
   provider prompt cache mostly hits; answers include full task context.
-- **Ask the reviewer AI** — preserves the captured auto-review request prefix, supporting both legacy
-  four-section prompts and rc.2's JSON item messages. Without a capture, it can conservatively rebuild
-  advisory material when arguments and schemas are available; this is not an equivalent official snapshot.
-  Reviewer answers enter the main chat only when the user explicitly relays them.
+- **Ask the reviewer AI** using the material and verdict associated with this approval. An explanation prompt lets the model answer in prose. A separate classification path uses the official decision format. The reviewer’s answer enters the main chat only when you choose to relay it.
 - **双问 (ask both)** — send one question to both sides, each answer stays in its own tab.
 - Executor Q&A is written back into the session as a labeled `approval-consult` context record
   (visible in the history panel; official Chat hides plain context rows).
@@ -41,8 +36,7 @@ notes or reject blindly. This plugin adds a consultation panel on top of the app
 - Streaming Markdown answers, token/cache usage, stop & retry, follow-up questions, relay reviewer
   answers to the executor (pending approvals only).
 - **Graceful degradation**: no auto-review plugin → executor-only UI; no `dsh-approval-timeout` plugin
-  → no countdown probing, no countdown UI at all. Both are auto-detected; can be forced with
-  `reviewerMode` / `timeoutAutoPause`.
+  → no countdown probing or controls. The host detects these optional plugins; `reviewerMode` can override reviewer availability.
 - **Custom common questions**: edit inside the panel (add/delete/reorder/reset), persisted to
   `~/.dsh-approval-consult/presets.json` (or the profile data dir when DSH runs with `--profile`;
   override with the `dataDir` config or `$DSH_APPROVAL_CONSULT_DATA`).
@@ -89,7 +83,7 @@ Alternatively clone the repository and install its directory, or use `plugin_man
 | `maxConcurrentJobs` | `3` | concurrent side-call answers per approval |
 | `executorMaxTokens` / `reviewerMaxTokens` | `4000` / `2400` | answer budgets (clamped to ≥3000/≥1800) |
 | `threadTtlMs` | `7200000` | in-memory thread retention |
-| `timeoutAutoPause` | `on-send` | pause `dsh-approval-timeout` countdown: `on-send` / `on-open` / `off` |
+| `timeoutAutoPause` | `on-send` | accepts `on-send` / `on-open` / `off`; a global-only cancellation API requires explicit confirmation |
 | `reviewerMode` | `auto` | reviewer capability: `auto` (detect plugin) / `on` / `off` |
 | `presets` | builtin | deployment default common questions (user edits in panel take precedence) |
 
