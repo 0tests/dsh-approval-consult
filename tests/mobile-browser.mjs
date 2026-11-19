@@ -16,15 +16,23 @@ const modules = { react: ['react', 'react.production.js'], 'react-dom': ['react-
 const react = `var process={env:{NODE_ENV:'production'}}; var modules={${Object.entries(modules).map(([id, [pkg, file]]) =>
   `${JSON.stringify(id)}:function(module,exports,require){${readFileSync(resolve(dirname(require.resolve(`${pkg}/package.json`)), 'cjs', file), 'utf8')}\n}`).join(',')}}; var cache={}; function require(id){if(!cache[id]){var module=cache[id]={exports:{}};modules[id](module,module.exports,require)}return cache[id].exports}window.React=require('react');window.ReactDOM=require('react-dom/client');`
 let asks = 0, polls = 0, disconnected = false, answer = '', status = 'streaming', hasJob = false
-const pending = { consultKey: 'ac:A', callId: 'call-1', toolName: 'shell', reason: '确认执行命令', resolved: false }
+const pending = { consultKey: 'ac:A', approvalId: 'one', callId: 'call-1', toolName: 'shell', reason: '确认执行命令', resolved: false }
 const bootstrap = `window.__ModuleLoader__={load(def){var plugin=def.factory(()=>React),dict={},cleanups=[];
-const binding={props:{sessionId:'A'}}, pending={kind:'approval',key:'approval-1',callId:'call-1',toolName:'shell',reason:'确认执行命令',answerable:true};
-const statuses=new Map([['A',{pendingInteraction:pending}]]);
+const binding={props:{sessionId:'A'}}, pending={kind:'approval',key:'approval:1',callId:'call-1',toolName:'shell',reason:'确认执行命令',answerable:true};
+const statuses=new Map([['A',{pendingInteraction:pending}]]), listeners=new Set();
+window.decisions=[];
+function answer(outcome){window.decisions.push([this.key,outcome])}
+pending.answer=answer;
+window.replaceApproval=()=>{
+  statuses.set('A',{pendingInteraction:{...pending,key:'approval:2',callId:'call-2',reason:'另一项审批'}});
+  for(const fn of listeners)fn();
+};
 plugin.apply({effect(fn){const dispose=fn();if(dispose)cleanups.push(dispose)},locale:{register(ns,lang,values){dict[lang]=values;return()=>{}},bind(){return key=>dict.zh[key]||key},resolveText(x){return x}},
-uiSession:{adapter:{current:{getSnapshot:()=>binding,subscribe:()=>()=>{}}},sessionStatus:{getSnapshot:()=>statuses,subscribe:()=>()=>{}}},
+uiSession:{adapter:{current:{getSnapshot:()=>binding,subscribe:()=>()=>{}}},sessionStatus:{getSnapshot:()=>statuses,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn)}}},
 slots:{inject(name,fn){fn()},register(slot,render){if(slot.name==='shell.overlay')ReactDOM.createRoot(document.getElementById('root')).render(render({}));return()=>{}}}});window.disposeConsult=()=>cleanups.reverse().forEach(fn=>fn());}};`
 const server = createServer((req, res) => {
-  const path = new URL(req.url, 'http://localhost').pathname
+  const url = new URL(req.url, 'http://localhost')
+  const path = url.pathname
   const send = (body, type = 'application/json', code = 200) => { res.writeHead(code, { 'content-type': type }); res.end(type === 'application/json' ? JSON.stringify(body) : body) }
   if (path === '/') return send(`<meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Arial}#root{min-height:100vh}</style><div id="root"></div><script src="/react.js"></script><script>${bootstrap}</script><script src="/client.js"></script><script src="/back.js"></script>`, 'text/html;charset=utf-8')
   if (path === '/react.js') return send(react, 'text/javascript')
@@ -32,6 +40,10 @@ const server = createServer((req, res) => {
   if (path === '/back.js') return send(readFileSync(resolve(go, 'app/assets/web/dsh_web_back.js'), 'utf8'), 'text/javascript')
   if (path.endsWith('/ask')) { asks++; hasJob = true; return send({ ok: true, jobId: 'j:1', threadId: 'q:1', consultKey: 'ac:A' }) }
   if (disconnected) return send({ ok: false, error: 'disconnected' }, 'application/json', 503)
+  if (path.endsWith('/context') && url.searchParams.get('callId') === 'call-2') {
+    return send({ ok: true, consultKey: 'ac:B', pending: { ...pending, consultKey: 'ac:B', approvalId: 'two', callId: 'call-2', reason: '另一项审批' },
+      executor: { available: true }, features: { timeoutAvailable: false }, threads: { executor: [], reviewer: [] } })
+  }
   if (path.endsWith('/context')) return send({ ok: true, pending, consultKey: 'ac:A', executor: { available: true }, reviewer: { available: true },
     features: { timeoutAvailable: false, attachments: { enabled: false } }, limits: { maxQuestionChars: 2000 },
     threads: { executor: hasJob ? [{ id: 'q:1', jobId: 'j:1', at: 1, question: 'test', answer, status }] : [], reviewer: [] } })
@@ -99,8 +111,23 @@ try {
   assert.equal(await page.locator('.ac-input').inputValue(), '保留这条草稿')
   assert.equal(asks, 1, 'reconnection must not submit another question')
   assert.ok(polls > 0)
+  // Replace A directly with B in the same React update. Even a click before
+  // React paints B must never answer from A's still-visible consultation.
+  await page.locator('.ac-decide-actions .ac-btn-primary:enabled').waitFor({ state: 'attached' })
+  await page.evaluate(() => {
+    const allow = document.querySelector('.ac-decide-actions .ac-btn-primary')
+    window.replaceApproval()
+    allow.click()
+  })
+  await page.waitForFunction(() => !document.querySelector('.ac-decide-actions button:enabled'))
+  assert.deepEqual(await page.evaluate(() => window.decisions), [])
+  await page.evaluate(() => window.__dshAppBack())
+  await page.locator('[data-approval-consult-pill]').click()
+  await page.locator('.ac-input:not([disabled])').waitFor()
+  await page.locator('.ac-decide-actions .ac-btn-primary').click()
+  assert.deepEqual(await page.evaluate(() => window.decisions), [['approval:2', 'allowed-once']])
   assert.deepEqual(errors, [])
-  console.log('mobile browser: keyboard, Enter, real Go Back, reconnect and draft checks passed')
+  console.log('mobile browser: keyboard, Go Back, reconnect, draft and approval identity checks passed')
 } finally {
   await browser.close()
   await new Promise((resolve) => server.close(resolve))

@@ -96,11 +96,14 @@ test('parseReviewDecision 带 reason', () => {
   })
 })
 
-test('parseReviewDecision 容忍前后文本/代码块', () => {
-  assert.deepEqual(__test.parseReviewDecision('思考一下\n```json\n{"risk":"high","decision":"deny"}\n```'), {
-    risk: 'high',
-    decision: 'deny',
-  })
+test('parseReviewDecision rejects surrounding prose and repeated or unexpected members', () => {
+  for (const text of [
+    'verdict {"risk":"low","decision":"allow"}',
+    '{"risk":"low","decision":"allow","extra":true}',
+    '{"risk":"medium","risk":"low","decision":"allow"}',
+    '{"risk":"medium","decision":"deny","reason":null}',
+  ]) assert.equal(__test.parseReviewDecision(text), null)
+  assert.equal(__test.parseReviewDecision('{"risk":"medium","decision":"deny","reason":"a: b"}').reason, 'a: b')
 })
 
 test('parseReviewDecision 缺字段返回 null', () => {

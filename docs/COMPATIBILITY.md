@@ -1,19 +1,19 @@
 # 兼容性说明（COMPATIBILITY）
 
-> 最后更新：2026-11-13。rc.2 与 Go 的验证包括源码契约、自动测试及模拟宿主的 Chromium 检查；真机范围另见 `VERIFICATION.md`。
+> 最后更新：2026-11-18。rc.2 与 Go 的验证包括源码契约、自动测试及模拟宿主的 Chromium 检查；真机范围另见 `VERIFICATION.md`。
 
 ## 1. 运行环境矩阵
 
 | 项 | 已验证 | 说明 / 兜底 |
 | --- | --- | --- |
 | DSH 实现 | `0.2.1-rc.2`、`0.2.2-rc.1` 历史实机；`0.2.2-rc.2` 自动验证 | rc.2 官方提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`；真实模型与 UI 未复测 |
-| DSH Go | `v1.0.15` 本机原生协议 + Web 手机 | 固定提交 `a9877420ab9aee121134faf01b6a92a39ce0b05b`；官方 SDK 与真实返回脚本通过自动验证，Android 实机待验收 |
+| DSH Go | `v1.0.15`、`v1.2.0` 本机原生协议及手机 Web | 在两个固定版本检查原生面板、聊天加号入口与返回脚本；真机系统键盘另行验收 |
 | Node | `>=20.0.0`（`package.json` engines） | 宿主实现只用 Node 内置模块（`node:fs`/`node:path`/`node:url`/`node:crypto`）；注意 DSH 0.2.2 宿主本身要求 Node >=24.9 |
 | OS | Windows 11（真实），路径处理用 `node:path` | 无平台专属调用；macOS/Linux 预期可用（未实机验证，CI 跑 Ubuntu/Windows） |
 | 浏览器 | Microsoft Edge / Chrome（Chromium 120+） | 依赖 `HTMLElement.showPopover` 时自动降级为 fixed 层；`color-mix()` 失败时回退到 CSS 变量兜底色 |
 | 屏幕 | 历史桌面 1440×900 / 2552×1234、手机 390×844；本轮浏览器 393×852 / 852×393 | 模拟 330px / 200px 键盘遮挡；横屏短视口保留输入与发送，恢复高度后显示完整面板 |
 | 主题 | 深色、浅色（token）、自定义壁纸主题（`--dsw-alias-bg-base: transparent`） | 面板自带不透明表面色，不依赖可能透明的主题底色 |
-| 语言 | 简体中文、English（215 个 Web key 完全对齐） | 跟随 DSH locale；原生标签跟随 Go caps/event locale |
+| 语言 | 简体中文、English（Web 文案键由测试核对） | 跟随 DSH locale；原生标签跟随 Go caps/event locale |
 
 ## 1.1 DSH 0.2.2 的额外宿主要求
 
@@ -28,7 +28,7 @@
 
 ## 1.2 DSH 0.2.2-rc.2
 
-- 自动审查的 `messages` 从单条四段材料改为环境消息加逐条 JSON。最后一条为 pending tool-call，之前最近的同 mode/name tool-schema 提供定义；插件同时支持新旧格式，追问不修改捕获前缀。
+- 自动审查的 `messages` 从单条四段材料改为环境消息加逐条 JSON。最后一条为 pending tool-call，之前最近的同 mode/name tool-schema 提供定义；插件同时支持新旧格式，解释与追问使用独立系统提示及已关联的审查材料。
 - 同步 rc.2 `REVIEW_POLICY`；从日志生成的 advisory 材料仍是保守重建，不代替官方授权。参数、schema 或路由缺失时不可用；不会把截断 JSON 当作完整证据。
 - 子代理创建文本按 direct-parent-instruction/fact 分类，普通用户/SDK 文本按 user-instruction 分类，图片保持 fact，项目约束保持 constraint。
 - 侧调用保留会话身份并使用 `purpose: approval-consult`；主请求捕获排除 auxiliary purpose，复制后的侧调用也不会再次捕获。
@@ -57,12 +57,12 @@ Go 原生部分另通过可选 `ctx.inject(['dshGo'], ...)` 注册 `consult` 面
 | 插件 | 检测方式 | 已安装 | 未安装 |
 | --- | --- | --- | --- |
 | `@deepseek-ai/dsh-experimental-auto-review` | cordis registry 里的 plugin runtime name（`experimental-auto-review`） | 双通道可用；优先复用捕获到的审查请求 | 只保留「执行 AI」通道，隐藏审查 tab/双问/审查文案，`/ask`(reviewer) 与 `/review` 返回 409 |
-| `dsh-approval-timeout` | registry name（`approval-timeout`） | 显示倒计时 chip/提示条，可暂停；自动暂停遵守“防误伤其它审批”规则 | 客户端**一次请求都不发**，不显示任何倒计时内容（无“未安装”提示） |
+| `dsh-approval-timeout` | registry name（`approval-timeout`） | 显示匹配到本次调用的倒计时；暂停此主机所有倒计时需手动确认 | 客户端**一次请求都不发**，不显示任何倒计时内容（无“未安装”提示） |
 | `dsh-notify` / `dsh-web-mobile-fix` 等 | 无依赖 | 无影响 | 无影响 |
 
 补充：
 
-- `reviewerMode: auto | on | off` 可强制审查能力；`timeoutAutoPause: on-send | on-open | off` 控制倒计时暂停策略。
+- `reviewerMode: auto | on | off` 可强制审查能力；`timeoutAutoPause` 保留配置兼容性；全局暂停接口只接受手动确认。
 - 自动审查策略会在捕获到真实审查请求时**自动同步**（`/diag.config.reviewPolicySource = captured`），
   避免 DSH 升级后 `lib/review-policy.txt` 过期；未捕获时使用内置副本。
 

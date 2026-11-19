@@ -48,12 +48,12 @@ test('late advisory output cannot label a different approval as allowed', async 
 })
 
 test('stopping a thread prevents an in-flight poll from restoring streaming', async () => {
-  const h = client(['pollJob', 'stopThread', 'findThread', 'updateThread'])
+  const h = client(['pollJob', 'stopThread', 'findThread', 'updateThread'], { loadContext() {} })
   h.state.store.threads.executor.push({ id: 'q:1', jobId: 'j:1', answer: '', status: 'streaming' })
   h.ctx.pollJob('executor', 'q:1', 'j:1', 0)
   const tick = h.scheduled.shift()()
   const stop = h.ctx.stopThread('executor', 'q:1')
-  h.requests.find((r) => r.url.endsWith('/cancel')).resolve({ ok: true })
+  h.requests.find((r) => r.url.endsWith('/cancel')).resolve({ ok: true, status: 'cancelled' })
   await stop
   h.requests.find((r) => r.url.includes('/poll?')).resolve({ delta: 'late text', status: 'streaming', cursor: 9 })
   await tick

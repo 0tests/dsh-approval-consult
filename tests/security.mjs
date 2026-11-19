@@ -37,31 +37,21 @@ const check = (label) => {
 
 // 1) matchReview 只接受可验证关联
 {
-  const stale = review('shell', { command: 'echo harmless' }, 'A')
-  const state = { reviews: new Map([['A', [stale]]]) }
+  const exec = { seq: 3, sessionId: 'A', args: { command: 'echo same' } }
+  const same = review('shell', exec.args, 'A')
+  same.executionLogSeq = 42
+  same.executionSeq = exec.seq
+  same.action.mode = 'native'
+  const state = { reviews: new Map([['A', [same]]]) }
   const match = fn('matchReview', { state })
-  assert.equal(match('A', 'shell', { args: { command: 'destructive-operation-placeholder' } }, ''), null)
-  const same = review('shell', { command: 'echo same' }, 'A')
-  state.reviews = new Map([['A', [same]]])
-  assert.equal(match('A', 'shell', { args: { command: 'echo same' } }, ''), same)
-  const other = review('shell', { command: 'echo same' }, 'B')
-  state.reviews = new Map([['A', [review('different-tool', {}, 'A')]], ['B', [other]]])
-  assert.equal(match('A', 'shell', { args: { command: 'echo same' } }, ''), null)
-  // 参数已知且明确不一致：即使理由文字命中也不复用（理由不能替代调用身份）。
-  const reasonHit = review('shell', { command: 'echo x' }, 'A')
-  reasonHit.decision.reason = '这条命令会不可逆地删除工作区之外的文件，需要人工确认'
-  state.reviews = new Map([['A', [reasonHit]]])
-  assert.equal(
-    match('A', 'shell', { args: { command: 'other' } }, `Auto review denied tool "shell": ${reasonHit.decision.reason}`),
-    null,
-  )
-  // 参数未知时，才允许用「理由原样命中」作为弱证据。
-  state.reviews = new Map([['A', [reasonHit]]])
-  assert.equal(
-    match('A', 'shell', undefined, `Auto review denied tool "shell": ${reasonHit.decision.reason}`),
-    reasonHit,
-  )
-  check('matchReview: 参数冲突一律不复用；参数未知时才用理由命中；跨 session 不复用')
+  assert.equal(match('A', 'shell', exec, 42), same)
+  for (const other of [undefined, { ...exec, seq: 4 }, { ...exec, args: {} }, { ...exec, parent: {} }]) {
+    assert.equal(match('A', 'shell', other, 42), null)
+  }
+  assert.equal(match('B', 'shell', exec, 42), null)
+  state.reviews.get('A').push({ ...same })
+  assert.equal(match('A', 'shell', exec, 42), null)
+  check('matchReview requires a unique review of the same execution and mode')
 }
 
 // 2) startAsk 并发名额（await 之后复核）
@@ -115,6 +105,7 @@ const check = (label) => {
           calls += 1
           await gate
           yield { type: 'text-delta', text: '{"risk":"low","decision":"allow"}' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
         },
       },
     },
@@ -197,6 +188,7 @@ const check = (label) => {
             throw new Error('connection interrupted')
           }
           yield { type: 'text-delta', text: '{"risk":"high","decision":"deny"}' }
+          yield { type: 'finish', reason: { kind: 'stop' } }
         },
       },
     },

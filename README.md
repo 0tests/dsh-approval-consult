@@ -10,7 +10,7 @@
 
 这是一个本地 DSH 插件（宿主 Cordis 插件 + Web 面板 + 可选 DSH Go 原生面板），无构建步骤、无第三方运行时依赖。
 
-当前版本 **v1.3.1** 已适配 **DSH 0.2.2-rc.2**，支持 **DSH Go v1.0.15 本机原生面板**及 Web 手机键盘、返回和断线恢复优化。配套 Go App 补丁在原生审批卡增加「咨询」，自动定位当前审批；该按钮需要重新构建并安装修改后的 App，只升级插件时仍使用会话入口。已发布到 npm 与 [GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1)；原生入口与安装方式见 [DSH Go 说明](docs/DSH-GO.md)，验证范围见 [验收记录](docs/VERIFICATION.md)。
+已发布的 **v1.3.1** 适配 DSH 0.2.2-rc.2，可从 DSH Go 本机的会话入口打开咨询。本分支新增官方 App 聊天页 **「＋ → 审批咨询」**：在待审批卡旁打开面板，读完回答后收起面板，在原卡作决定。安装本分支的插件并按需重启引擎即可。[GitHub Release](https://github.com/0tests/dsh-approval-consult/releases/tag/v1.3.1) · [DSH Go 安装与入口](docs/DSH-GO.md)
 
 ---
 
@@ -33,7 +33,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 - 审查 AI 的回答默认不进主对话，点「转达给执行 AI」才注入（仅审批等待期间可用；结束后记录只读，不能转达）；
 - 看完直接在面板里「允许一次 / 拒绝」，和官方审批卡片是同一个动作；
 - 面板里能看到执行 AI / 审查 AI 的实时回答、缓存命中与「已保存到会话」标记；
-- 与自动拒绝倒计时（`dsh-approval-timeout`）可选集成：默认**打开面板不打扰倒计时**，只有你真正开始提问时才暂停（可配置 `on-open` / `off`；该插件的取消是全局的，自动暂停遇到其它待审批项会拒绝并提示）。**没装该插件时完全不探测、不显示任何倒计时内容**。
+- 安装了 `dsh-approval-timeout` 时显示匹配当前调用的倒计时。对仅提供全局取消接口的版本，暂停所有倒计时需要用户明确确认；回看历史只读取记录。
 
 ---
 
@@ -91,9 +91,11 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 4. 读完再决定。执行 AI 的问答会以「审批咨询记录」注入会话；审查 AI 的回答可点「转达给执行 AI」（审批结束前）。
 5. 审批结束后面板保留全部问答（banner 提示已结束），可继续阅读或关闭。
 
+若 DSH Web 的审批事件缺少能关联宿主记录的调用标识，面板会提示缺少材料，原卡的决定按钮仍可使用。
+
 ### 审查 AI 的两种模式
 
-- **官方审查已捕获**：直接显示当时那次审查的 `risk/decision/reason`、审查依据条数，并可追问。上下文保留官方请求的**原始前缀**：旧版四段材料、rc.2 逐条 JSON 消息均支持，不塞主对话。
+- **已匹配到本次官方审查**：展示该次审查的风险、决定、理由和依据条数；旧版四段材料、rc.2 逐条 JSON 消息均支持。追问使用独立的解释提示词和本次审查材料。
 - **没有捕获到官方审查**（例如 sandbox 提权）：仅在参数和工具定义足够完整时提供「让审查 AI 重新评估」。材料从会话日志保守重建，按当前策略使用旧版四段格式或新版逐条消息格式；它与官方完整快照不保证等价。**结果只是参考意见，不是官方审批结论，也不会替用户批准工具执行。**
 
 ### 没有装自动审查插件时
@@ -117,7 +119,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 | `executorMaxTokens` | `4000` | 执行 AI 侧回答预算（代码内再按 ≥3000 兜底） |
 | `reviewerMaxTokens` | `2400` | 审查 AI 侧回答预算（代码内再按 ≥1800 兜底） |
 | `threadTtlMs` | `7200000` | 线程在宿主内存中的保留时间 |
-| `timeoutAutoPause` | `on-send` | 自动拒绝倒计时的暂停策略：`on-send` 仅开始时提问暂停 / `on-open` 打开面板即暂停 / `off` 完全不自动暂停（面板里的「暂停倒计时」按钮始终可用） |
+| `timeoutAutoPause` | `on-send` | 保留旧配置值 `on-send`、`on-open`、`off`；对仅提供全局取消的倒计时插件，暂停需手动确认 |
 | `reviewerMode` | `auto` | 审查 AI 能力：`auto` 按官方自动审查插件是否安装/启用自动检测（没装时只保留执行 AI）；`on` 强制显示；`off` 强制只问执行 AI |
 | `presets` | 内置 | `{ executor: [...], reviewer: [...] }` 部署默认常用问题；用户在面板里编辑后以 `<数据目录>/presets.json` 为准（优先于本配置） |
 | `dataDir` | 自动 | 用户数据目录。默认 `~/.dsh-approval-consult`；`--profile` 启动的 DSH 用该 profile 的 `data/approval-consult`；也可用 `DSH_APPROVAL_CONSULT_DATA` 覆盖 |
@@ -134,7 +136,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 ### 1. 双通道、互不污染；上下文缓存命中
 
 - **执行 AI 通道**：捕获主对话最近一次请求的完整 `GenerateOptions`（provider/model/system/tools/messages/toolHistory 原样保留），只在其后追加一条 user 消息。因为前缀逐字节一致，provider 的 prompt cache 基本全部命中（实测 63.6 万输入 token 中 63.4 万为缓存命中，97%–99.7%）。
-- **审查 AI 通道**：捕获 auto-review 自己那次审查请求（`system` 以 `REVIEW_POLICY` 开头），原样复用；追加它的结论 JSON 和本线程问答回合。追问时前缀继续增长，后续同样命中缓存。
+- **审查 AI 通道**：分类使用官方审查策略。解释与追问复用此次审查的材料与判定，使用独立的咨询提示词；缓存命中由模型提供方报告。
 - 两条通道都带 `[[approval-consult-side-query]]` 哨兵 + `WeakSet` 重入保护，绝不会被本插件自己的 `llm/stream` 监听器再次捕获，也不会递归。
 
 ### 2. 只旁路、不接管
@@ -219,7 +221,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
 | POST | `/dsh-approval-consult/review` | 对没有官方审查记录的审批做 advisory 重新评估 |
 | GET/POST | `/dsh-approval-consult/presets` | 读取/保存常用问题（`{executor?, reviewer?}`；最多 10 条、单条 ≤300 字） |
 | POST | `/dsh-approval-consult/presets/reset` | 恢复默认常用问题（删除数据目录里的 `presets.json`） |
-| GET | `/dsh-approval-consult/diag` | 计数、捕获归属、能力检测（`reviewerAvailable`/`timeoutAvailable`）、存活 agent 的权限预设等诊断 |
+| GET | `/dsh-approval-consult/diag` | 默认返回聚合计数、能力开关和脱敏错误信息。开发诊断受 `devTools` 控制 |
 | GET/POST | `/dsh-approval-consult/debug/{inspect,selftest,events,inject,features}` | devTools 排障（可用 `devTools:false` 关闭；`features` 可临时切换能力开关自测） |
 
 细节见 [`docs/CLIENT-CONTRACT.md`](docs/CLIENT-CONTRACT.md)。
@@ -233,7 +235,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
   因此插件不需要改代码，**只需要装进桌面端使用的 `desktop` profile**（桌面端只启动该 profile）。
   安装方式与验证清单见 [`docs/DESKTOP.md`](docs/DESKTOP.md)。CLI / TUI 形态没有 UI，宿主插件本身无副作用。
 - **DSH 版本**：历史实机验证为 `0.2.1-rc.2` 与 `0.2.2-rc.1`（Web profile）；`0.2.2-rc.2` 已完成官方源码核对、审查请求离线重放和自动回归，尚未进行该版本的实机模型/UI 验收。0.2.2 宿主要求 Node >=24.9，原生工具需挂载 `@deepseek-ai/dsh-tool-executor-native`。rc.2 的审批事件、`agent.inject()` 和所用客户端槽位仍可用，自动审查材料格式需使用本次适配。
-- **与 `dsh-approval-timeout` 的可选集成**：宿主通过插件注册表检测该插件是否在运行；未安装时 `/context.features.timeoutAvailable=false`，客户端**一次探测请求都不发**、不渲染任何倒计时相关内容（不会出现 "未安装" 提示，也不会产生 404 噪音）。已安装时只读探测 `/status`，按 `timeoutAutoPause` 策略决定是否调用 `/cancel`。注意该插件的 `/cancel` 是**全局**的（会取消所有待审批项的倒计时）：自动路径在探测到还有其它未取消的待审批项时会拒绝自动暂停并提示；只有用户手动点面板里的「暂停倒计时」才做全局取消（按钮 tooltip 已说明）。
+- **倒计时集成**：检测到插件时才读取倒计时状态。全局取消会影响所有待审批项，需要用户确认并收到成功回执。
 - **与官方 `@deepseek-ai/dsh-experimental-auto-review` 的可选依赖**：未安装时只保留执行 AI 通道（见上文）；已安装时两条通道都可用，且审查侧优先复用官方审查请求。
 - **常用问题持久化**：用户编辑后写入 `<dataDir>/presets.json`（默认 `~/.dsh-approval-consult`；UTF-8、原子写入），优先于 `config.presets`；删掉该文件或点「恢复默认」即回到配置/内置默认。npm 安装升级不会覆盖用户配置，不写 profile patch。
 - **与 `dsh-notify` / `mobile-fix` 等插件无冲突**：不依赖、不修改官方审批卡片 DOM；不占用其他插件的 slot id。
@@ -242,7 +244,7 @@ Auto 审查（`@deepseek-ai/dsh-experimental-auto-review`）会在工具执行�
   - 线程在宿主内存，DSH 重启后随审批一起消失（审批本身也不跨重启）；插件热重载会保留状态，若记录仍丢失则 `/context` 会从会话日志重建（`approval/asked` 未 decided 即仍在等待），重建的记录带 `consultKey: "re:*"`；
   - 重建只能恢复审批与审查材料，**旧的主对话请求无法回溯**，因此旧会话恢复后「执行 AI」可能显示上下文不可用（审查 AI 可用）；
   - 审查 AI 的可选「重新评估」是 advisory 参考，不是官方审批结论，不能替你授权；
-  - `devWatch` 热重载会**保留**咨询状态（宿主状态放在进程级 `globalThis`）；只有手动删除源码/进程重启或插件被禁用才会丢；
+  - 开发热重载会交接内存中的咨询状态。禁用插件或重启引擎会释放原实例中的咨询记录。
   - 思考型模型若把输出预算全花在 reasoning 上会没有正文，插件会显示明确错误并建议重试（侧调用预算已按 ≥3000/≥1800 兜底）。
 
 ---
